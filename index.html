@@ -1,0 +1,162 @@
+<title>Interview Prep Hub</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#EDEBE4; --fg:#1D2530; --muted:#556170; --line:#DAD7CD;
+  --start:#4B3FA8; --lld:#0B6B6A; --hld:#244A8F; --practice:#9A4A12; --bank:#8A2D63; --pat:#3F6B1F;
+  --on-accent:#FFFFFF; --good:#17794A;
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+    --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+    --on-accent:#10151C; --good:#5CD39A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+  --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+  --on-accent:#10151C; --good:#5CD39A; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.7 var(--font-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+.wrap{max-width:820px;margin:0 auto;padding-block:48px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:40px}
+.kicker{font:600 .78rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.lede{color:var(--muted);font-size:1.08rem;margin-top:12px;max-width:56ch}
+.today{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+.today .label,.label{font:600 .75rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.today a.go{align-self:flex-start;margin-top:6px;background:var(--fg);color:var(--bg);text-decoration:none;font-weight:600;border-radius:12px;padding:12px 20px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:680px){.cards{grid-template-columns:1fr}}
+.card{--c:var(--start);display:flex;flex-direction:column;gap:12px;border:1px solid var(--line);border-top:5px solid var(--c);background:var(--surface);border-radius:16px;padding:22px;text-decoration:none;min-width:0}
+.card:hover{border-color:var(--c)}
+.card h2{font-size:1.4rem;font-weight:600}
+.card .meta{font:500 .8rem var(--font-mono);color:var(--muted)}
+.card ul{margin:0;padding-left:20px;color:var(--muted);font-size:.95rem}
+.card .open{margin-top:auto;color:var(--c);font-weight:600}
+.bar{height:6px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--c);transition:width .25s}
+.prog{font:500 .8rem var(--font-mono);color:var(--muted)}
+.jumps{display:flex;flex-direction:column;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{--c:var(--start);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 16px;font-weight:500;font-size:.95rem;border-left:5px solid var(--c)}
+.chip:hover{border-color:var(--c)}
+.path{display:flex;flex-direction:column}
+.path .row{display:grid;grid-template-columns:90px minmax(0,1fr);gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.path .row:first-child{border-top:1px solid var(--line)}
+.path .d{font:600 .8rem var(--font-mono);color:var(--muted);padding-top:3px}
+@media(max-width:480px){.path .row{grid-template-columns:1fr;gap:2px}}
+.foot{color:var(--muted);font-size:.9rem}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="kicker">Mid-level interview prep</p>
+    <h1>Interview Prep Hub</h1>
+    <p class="lede">Low-level design, high-level design and design patterns, taught in plain words with diagrams and worked answers. Pick one lesson a day. Small and regular beats long and rare.</p>
+  </header>
+
+  <section class="today" aria-label="Where to continue">
+    <span class="label">Today</span>
+    <p id="today-text">Start with lesson 1. It takes about 6 minutes.</p>
+    <a class="go" id="today-link" href="course.html#lesson-1">Start lesson 1</a>
+  </section>
+
+  <section class="cards" aria-label="Courses">
+    <a class="card" id="card-course" style="--c:var(--lld)" href="course.html">
+      <span class="meta">30 lessons</span>
+      <h2>Full course</h2>
+      <p>Design thinking, LLD, HLD, practice, and a question bank of common interview questions with full answers.</p>
+      <ul>
+        <li>Four-question habit for any design</li>
+        <li>Classes, numbers, scaling, trade-offs</li>
+        <li>39 worked questions, India-focused</li>
+      </ul>
+      <div class="bar"><i id="bar-course"></i></div>
+      <span class="prog" id="prog-course">0 of 30 done</span>
+      <span class="open">Open the course</span>
+    </a>
+    <a class="card" id="card-pat" style="--c:var(--pat)" href="design-patterns.html">
+      <span class="meta">13 lessons</span>
+      <h2>Design patterns</h2>
+      <p>The patterns that get asked most, each with a diagram, Java code, a usage example and interview questions.</p>
+      <ul>
+        <li>Strategy, Observer, State, Factory</li>
+        <li>Patterns hidden inside Spring</li>
+        <li>14 comparison questions answered</li>
+      </ul>
+      <div class="bar"><i id="bar-pat"></i></div>
+      <span class="prog" id="prog-pat">0 of 13 done</span>
+      <span class="open">Open the patterns course</span>
+    </a>
+  </section>
+
+  <section class="jumps" aria-label="Jump to a topic">
+    <span class="label">Jump straight to a topic</span>
+    <div class="chips">
+      <a class="chip" style="--c:var(--start)" href="course.html#lesson-1">Start here</a>
+      <a class="chip" style="--c:var(--lld)" href="course.html#lesson-3">LLD</a>
+      <a class="chip" style="--c:var(--hld)" href="course.html#lesson-8">HLD</a>
+      <a class="chip" style="--c:var(--practice)" href="course.html#lesson-13">Daily drill</a>
+      <a class="chip" style="--c:var(--bank)" href="course.html#lesson-14">What is asked in India</a>
+      <a class="chip" style="--c:var(--bank)" href="course.html#lesson-15">HLD questions</a>
+      <a class="chip" style="--c:var(--bank)" href="course.html#lesson-16">LLD questions</a>
+      <a class="chip" style="--c:var(--bank)" href="course.html#lesson-17">Java and SQL questions</a>
+      <a class="chip" style="--c:var(--pat)" href="design-patterns.html#lesson-1">Patterns map</a>
+      <a class="chip" style="--c:var(--pat)" href="design-patterns.html#lesson-13">Pattern questions</a>
+    </div>
+  </section>
+
+  <section class="jumps" aria-label="Suggested order">
+    <span class="label">A suggested order</span>
+    <div class="path">
+      <div class="row"><span class="d">Week 1</span><span>Full course, lessons 1 to 7: the habit, then LLD thinking. One lesson a day.</span></div>
+      <div class="row"><span class="d">Week 2</span><span>Full course, lessons 8 to 12: HLD thinking, then a full design talked through.</span></div>
+      <div class="row"><span class="d">Week 3</span><span>Design patterns course. Start with the map, then Strategy, Observer, State and Factory.</span></div>
+      <div class="row"><span class="d">Week 4</span><span>Question bank, lessons 14 to 17. Try each question out loud before opening the answer.</span></div>
+      <div class="row"><span class="d">Every day</span><span>The 20-minute drill in lesson 13 of the full course. Do the smallest version on bad days.</span></div>
+    </div>
+  </section>
+
+  <p class="foot">Your ticks are saved in this browser only, so they will not follow you to another device or browser.</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+function load(key){try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){return {}}}
+function count(o){var n=0;for(var k in o)if(o[k])n++;return n}
+var course=load('design-course-v1'),pat=load('design-patterns-v1');
+var nc=count(course),np=count(pat);
+function set(id,txt){document.getElementById(id).textContent=txt}
+set('prog-course',nc+' of 30 done');
+set('prog-pat',np+' of 13 done');
+document.getElementById('bar-course').style.width=Math.round(nc/30*100)+'%';
+document.getElementById('bar-pat').style.width=Math.round(np/13*100)+'%';
+// continue where you left off: first lesson of the full course not yet ticked
+if(nc>0&&nc<30){
+  var next=0;
+  for(var i=1;i<=30;i++){if(!course['lesson-'+i]){next=i;break}}
+  if(next){
+    set('today-text','You have finished '+nc+' of 30 lessons in the full course. Next up is lesson '+next+'.');
+    var a=document.getElementById('today-link');
+    a.href='course.html#lesson-'+next;a.textContent='Continue with lesson '+next;
+  }
+}else if(nc===30){
+  set('today-text','You finished the full course. Redo the daily drill, or work through the patterns course.');
+  var b=document.getElementById('today-link');b.href='course.html#lesson-13';b.textContent='Open the daily drill';
+}
+})();
+</script>
