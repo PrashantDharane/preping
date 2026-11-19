@@ -1,0 +1,933 @@
+<title>Concurrency and JVM Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#EDEBE4; --fg:#1D2530; --muted:#556170; --line:#DAD7CD;
+  --start:#4B3FA8; --lld:#0B6B6A; --hld:#244A8F; --practice:#9A4A12; --bank:#8A2D63; --pat:#3F6B1F;
+  --accent:var(--start);
+  --start-soft:#E7E4F7; --bank-soft:#F6E1EE; --pat-soft:#E3F0D3; --accent-soft:var(--start-soft); --lld-soft:#D9EFED; --hld-soft:#E0E8F8; --practice-soft:#F8E6D6;
+  --good:#17794A; --good-soft:#DCF2E6; --bad:#B3261E; --bad-soft:#FBE2DF; --warn-soft:#FBEBCD; --warn:#8A4B00;
+  --code-bg:#F0EEE7; --on-accent:#FFFFFF;
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+    --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+    --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+    --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+    --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+  --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+  --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+  --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+  --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+}
+body[data-track="start"]{--accent:var(--start);--accent-soft:var(--start-soft)}
+body[data-track="lld"]{--accent:var(--lld);--accent-soft:var(--lld-soft)}
+body[data-track="hld"]{--accent:var(--hld);--accent-soft:var(--hld-soft)}
+body[data-track="practice"]{--accent:var(--practice);--accent-soft:var(--practice-soft)}
+body[data-track="bank"]{--accent:var(--bank);--accent-soft:var(--bank-soft)}
+body[data-track="patterns"]{--accent:var(--pat);--accent-soft:var(--pat-soft)}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.75 var(--font-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;display:flex;align-items:center;gap:12px}
+.bar .where{flex:1;min-width:0;font:500 .85rem var(--font-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.92rem}
+body[data-track="conc"]{--accent:var(--hld);--accent-soft:var(--hld-soft)}
+.homelink{color:var(--accent);text-decoration:none;font-weight:600;font-size:.92rem;padding:8px 4px}
+.meter{height:4px;background:var(--surface-2)}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* lesson list */
+.list{display:none;padding:16px 0 8px}
+.list.open{display:block}
+.list h3{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.list a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--fg);font-size:.98rem}
+.list a:hover{background:var(--surface-2)}
+.list a[aria-current="page"]{background:var(--surface);border:1px solid var(--line)}
+.list .n{font:500 .8rem var(--font-mono);color:var(--muted)}
+.list .tick{font-size:.85rem;color:var(--good)}
+.list .min{font:400 .75rem var(--font-mono);color:var(--muted)}
+
+/* lesson */
+.lesson{padding-top:36px;display:flex;flex-direction:column;gap:28px}
+.kicker{font:600 .78rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lesson h1{font-size:clamp(1.9rem,5vw,2.5rem);font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.promise{color:var(--muted);font-size:1.08rem;margin-top:10px}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font:600 .75rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.sec h2{font-size:1.3rem;font-weight:600}
+.sec p+p{margin-top:2px}
+b,strong{font-weight:600}
+.box{border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.box.plain{background:var(--surface);border:1px solid var(--line)}
+.box.mistake{background:var(--bad-soft)}
+.box.mistake .label{color:var(--bad)}
+.box.remember{background:var(--warn-soft)}
+.box.remember .label{color:var(--warn)}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px}
+ol.steps li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);font:600 .85rem var(--font-mono);display:grid;place-items:center;margin-top:2px}
+ol.steps b{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;min-width:0}
+.two .h{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{font-size:1.05rem}
+.card .pic{color:var(--accent);font-weight:600;font-size:.95rem}
+.card .small{color:var(--muted);font-size:.93rem}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 .84rem/1.6 var(--font-mono);tab-size:2}
+.cap{font:500 .75rem var(--font-mono);color:var(--muted);margin-bottom:-4px}
+.cap.bad{color:var(--bad)} .cap.good{color:var(--good)}
+.cap.use{color:var(--accent);font-weight:600}
+pre.use{border-left:3px solid var(--accent)}
+.check{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.check .q{font-weight:600}
+.reveal{align-self:flex-start;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.ans{background:var(--good-soft);border-radius:10px;padding:12px 14px}
+.ans[hidden]{display:none}
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px 20px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.done-row{display:flex;align-items:center;gap:10px}
+.done-row input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* calculator + timer */
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.85rem;color:var(--muted)}
+.field input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:500 1rem var(--font-mono)}
+.out{display:flex;flex-direction:column}
+.out div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.out span{color:var(--muted);font-size:.95rem}
+.out b{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.timer{font:500 clamp(2.6rem,9vw,3.6rem)/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.stage{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 .85rem var(--font-mono)}
+.stage[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+code{font:500 .86em var(--font-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre code{padding:0;background:none}
+
+/* diagrams */
+.diagram{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.diagram svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.diagram .dcap{font-size:.88rem;color:var(--muted);text-align:center}
+.dg-box{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.2}
+.dg-if{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-st{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-note{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-dasharray:4 3}
+.dg-sep{stroke:var(--muted);stroke-width:1;opacity:.6}
+.dg-t{font:600 12.5px var(--font-display);fill:var(--fg);text-anchor:middle}
+.dg-s{font:italic 400 10px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-m{font:400 10.5px var(--font-mono);fill:var(--fg)}
+.dg-n{font:400 10.5px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-e{stroke:var(--muted);stroke-width:1.4;fill:none}
+.dg-e.dash{stroke-dasharray:5 4}
+.dg-lb{fill:var(--surface)}
+.dg-l{font:500 10.5px var(--font-body);fill:var(--fg);text-anchor:middle}
+.mk-tri{fill:var(--surface);stroke:var(--muted);stroke-width:1.2}
+.mk-open{fill:none;stroke:var(--muted);stroke-width:1.4}
+.mk-fill{fill:var(--muted);stroke:none}
+/* question bank */
+details.q{border:1px solid var(--line);background:var(--surface);border-radius:14px}
+details.q+details.q{margin-top:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 1.05rem/1.3 var(--font-display)}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"+";font:500 1.3rem var(--font-mono);color:var(--accent);flex:none}
+details.q[open]>summary::after{content:"\2212"}
+details.q[open]>summary{border-bottom:1px solid var(--line)}
+.qleft{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.qbody{padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.qbody .where{font-size:.9rem;color:var(--muted)}
+.qsec{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qlist{margin:0;padding-left:20px}
+.qlist li+li{margin-top:6px}
+.links{display:flex;flex-direction:column;gap:8px}
+.links a{color:var(--accent);word-break:break-word}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <a class="homelink" href="index.html">Home</a>
+    <span class="where" id="where">Lesson 1</span>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="list">All lessons</button>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <nav class="list" id="list" aria-label="Lessons"></nav>
+  <main class="lesson" id="lesson"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var KEY='java-deep-v1';
+var done={};
+try{done=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){done={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(done))}catch(e){}}
+
+/* ================= CONTENT ================= */
+/* block types: p, plain, analogy, steps, two, cards, code, mistake, check, remember, calc, drill, stages */
+var L=[
+/* ---------- 1 ---------- */
+{id:`lesson-1`,track:`conc`,trackName:`Concurrency and JVM`,title:`Why these two topics decide senior rounds`,min:8,
+ promise:`Concurrency and JVM tuning are where "10 years of Java" gets tested. A map of what is asked, and the way to think about it.`,
+ blocks:[
+ {t:`plain`,h:`<b>Concurrency</b> is several things happening at once and sharing data. <b>The JVM</b> is the engine that runs your code, owns your memory and cleans up after you. Interviewers for experienced roles ask about both, because production problems (slow service, out of memory, stuck threads) come from exactly here.`},
+ {t:`analogy`,h:`A kitchen at lunch rush. Concurrency is many cooks sharing one stove and one fridge: who goes when, and who must wait. The JVM is the kitchen itself: how big the counter is, and when the dishwasher runs. A small counter and a slow dishwasher stall every cook.`},
+ {t:`p`,h:`<h2>What the guides say gets asked</h2>`},
+ {t:`cards`,items:[
+   {h:`Concurrency`,b:`synchronized vs volatile vs atomic, thread pools and their settings, deadlock, ExecutorService, CompletableFuture, producer-consumer, and virtual threads.`},
+   {h:`JVM memory`,b:`Heap and stack, young and old generation, metaspace, what causes OutOfMemoryError.`},
+   {h:`Garbage collection`,b:`How it decides what to free, G1 versus ZGC, tuning, finding memory leaks with heap dumps.`},
+   {h:`Production scenarios`,b:`"The service is slow", "CPU is at 100 percent", "we got an OOM". What do you do, step by step.`}]},
+ {t:`remember`,h:`Senior interviews are <b>diagnosis stories</b>. Every lesson here ends with what you would check first when it goes wrong. That is the habit to build.`},
+ {t:`p`,h:`<h2>The plan</h2>`},
+ {t:`cards`,items:[
+   {h:`Lesson 2`,b:`Shared data: races, synchronized, volatile, atomics.`},
+   {h:`Lesson 3`,b:`Thread pools, locks, deadlock, producer-consumer.`},
+   {h:`Lesson 4`,b:`JVM memory layout, class loading, the JIT.`},
+   {h:`Lesson 5`,b:`Garbage collectors and how to choose.`},
+   {h:`Lesson 6`,b:`Three production incidents, diagnosed step by step.`},
+   {h:`Lesson 7`,b:`Twelve questions with full answers.`}]},
+ {t:`check`,q:`Which is more common in production incidents: a bug in your business logic, or a thread-pool or memory setting? Why does it matter for the interview?`,a:`Settings and resource limits cause a large share of real incidents: pools too small or unbounded, heap too small, no timeouts. Interviewers know this, so they probe your configuration knowledge and your diagnosis steps, not only your syntax.`}
+]},
+
+/* ---------- 2 ---------- */
+{id:`lesson-2`,track:`conc`,trackName:`Concurrency and JVM`,title:`Shared data: races, synchronized, volatile and atomics`,min:16,
+ promise:`The foundation. If you can explain why <code>count++</code> is unsafe and the three ways to fix it, you can answer most basic concurrency questions.`,
+ blocks:[
+ {t:`plain`,h:`A <b>race condition</b> happens when two threads touch the same data, at least one writes, and the result depends on timing. The famous case is <code>count++</code>. It looks like one step but is three: read, add one, write back.`},
+ {t:`diagram`,cap:`Both threads read 5, both write 6. One increment is lost.`,d:{w:420,alt:`Two threads read the same counter value and both write back the same result`,nodes:[
+   {id:`t1`,t:`Thread 1`,x:10,y:8,w:90,k:`state`},
+   {id:`t2`,t:`Thread 2`,x:10,y:92,w:90,k:`state`},
+   {id:`ct`,t:`counter`,x:170,y:46,w:80,m:[`value = 5`]},
+   {id:`nn`,t:`result`,x:290,y:30,w:120,k:`note`,m:[`both read 5`,`both write 6`,`expected 7, got 6`]}],
+  edges:[{a:`t1`,b:`ct`,l:`read 5`},{a:`t2`,b:`ct`,l:`read 5`},{a:`ct`,b:`nn`,k:`uses`}]}},
+ {t:`p`,h:`<h2>Three tools, three different jobs</h2>`},
+ {t:`cards`,items:[
+   {h:`synchronized`,pic:`Mutual exclusion plus visibility`,b:`Only one thread at a time may enter. Also makes the changes visible to the next thread that takes the same lock.`,small:`Use for compound actions on shared state.`},
+   {h:`volatile`,pic:`Visibility and ordering only`,b:`A write is seen by all threads immediately, and the compiler cannot reorder around it. But it does <b>not</b> make <code>count++</code> atomic.`,small:`Use for a flag read by many threads, like <code>running</code>.`},
+   {h:`Atomic classes`,pic:`Lock-free, single variable`,b:`<code>AtomicInteger</code>, <code>AtomicReference</code>. Use hardware compare-and-swap (CAS): "set to 6 only if it is still 5".`,small:`Use for counters and simple state.`}]},
+ {t:`code`,bad:true,cap:`Bad: looks fine, loses updates`,code:`class Counter {
+    private int count = 0;
+    void hit() { count++; }          // read, add, write: three steps, not atomic
+    int get() { return count; }      // may not even see the latest value
+}`},
+ {t:`code`,good:true,cap:`Good: three correct versions`,code:`// 1. synchronized
+synchronized void hit() { count++; }
+
+// 2. atomic: simplest and fastest for one counter
+private final AtomicInteger count = new AtomicInteger();
+void hit() { count.incrementAndGet(); }
+
+// 3. LongAdder: best when MANY threads update one counter (spreads the contention)
+private final LongAdder count = new LongAdder();
+void hit() { count.increment(); }`},
+ {t:`code`,use:true,cap:`How it is used: a stop flag and a rate counter in a service`,code:`class Poller implements Runnable {
+    private volatile boolean running = true;           // written by one thread, read by another
+    private final LongAdder polled = new LongAdder();
+
+    public void run() {
+        while (running) { fetchBatch(); polled.increment(); }
+    }
+    public void stop() { running = false; }            // the loop sees this promptly
+    public long polledSoFar() { return polled.sum(); } // exposed as a metric
+}`},
+ {t:`p`,h:`<h2>The Java Memory Model in one idea: happens-before</h2>`},
+ {t:`plain`,h:`Each thread may keep its own cached copy of variables. The memory model defines when one thread's write is guaranteed to be seen by another. That guarantee is called <b>happens-before</b>. Unlocking a monitor happens-before the next lock of it. A volatile write happens-before every later read of it. Starting a thread happens-before its first action.`},
+ {t:`mistake`,h:`Saying "volatile makes it thread-safe". It does not give atomicity. Also: double-checked locking for a singleton only works if the field is <code>volatile</code>. Without it, another thread can see a half-built object.`},
+ {t:`code`,cap:`Compare-and-swap, in plain words`,code:`// What incrementAndGet does internally
+int old, next;
+do {
+    old  = value.get();       // read current
+    next = old + 1;
+} while (!value.compareAndSet(old, next));   // write only if nobody changed it; else retry`},
+ {t:`check`,q:`Two threads each call <code>list.add(x)</code> on a shared <code>ArrayList</code>, and sometimes elements go missing or an exception appears. Name two fixes.`,a:`Use a thread-safe collection such as <code>CopyOnWriteArrayList</code> (many reads, few writes) or wrap with <code>Collections.synchronizedList</code>. Or better, avoid sharing: give each thread its own list and merge later. A plain ArrayList has no protection for its size and internal array.`}
+]},
+
+/* ---------- 3 ---------- */
+{id:`lesson-3`,track:`conc`,trackName:`Concurrency and JVM`,title:`Thread pools, locks, deadlock and producer-consumer`,min:18,
+ promise:`How to run work on threads without creating chaos. The thread pool settings are asked almost every time.`,
+ blocks:[
+ {t:`plain`,h:`Creating a thread per task is expensive and unbounded. A <b>thread pool</b> keeps a fixed set of workers and a queue of tasks. You hand over work and the pool decides who runs it and when.`},
+ {t:`analogy`,h:`A bank with 4 counters (core threads) and a waiting line (the queue). If the line is full, the manager opens extra counters (up to the maximum). If even that is not enough, the guard turns people away (the rejection policy).`},
+ {t:`diagram`,cap:`The order matters: core threads first, then the queue, then extra threads, then rejection.`,d:{w:420,alt:`New task flows through core threads, queue, extra threads, then rejection`,nodes:[
+   {id:`a`,t:`New task`,x:6,y:50,w:70,k:`state`},
+   {id:`b`,t:`Core threads`,s:`free?`,x:96,y:34,w:90},
+   {id:`c`,t:`Queue`,s:`has space?`,x:206,y:34,w:90},
+   {id:`d`,t:`Extra threads`,s:`up to max?`,x:316,y:34,w:98},
+   {id:`e`,t:`Rejected`,x:316,y:110,w:98,k:`note`,m:[`policy runs`]}],
+  edges:[{a:`a`,b:`b`},{a:`b`,b:`c`,l:`no`},{a:`c`,b:`d`,l:`full`},{a:`d`,b:`e`,l:`full`}]}},
+ {t:`code`,cap:`The pool you should create by hand`,code:`ThreadPoolExecutor pool = new ThreadPoolExecutor(
+    8,                                   // corePoolSize: always kept
+    16,                                  // maximumPoolSize: only used when the queue is full
+    60, TimeUnit.SECONDS,                // idle extra threads die after this
+    new ArrayBlockingQueue<>(200),       // BOUNDED queue: protects memory
+    new ThreadFactoryBuilder().setNameFormat("orders-%d").build(),   // name threads (Guava)
+    new ThreadPoolExecutor.CallerRunsPolicy());   // when full, the caller runs it: natural back-pressure`},
+ {t:`code`,use:true,cap:`How it is used: parallel calls with a timeout`,code:`@Service
+class DashboardService {
+    private final ExecutorService pool = Executors.newFixedThreadPool(8);
+
+    Dashboard load(long userId) throws Exception {
+        Future<Profile> p = pool.submit(() -> profiles.get(userId));
+        Future<List<Order>> o = pool.submit(() -> orders.recent(userId));
+        return new Dashboard(p.get(2, TimeUnit.SECONDS), o.get(2, TimeUnit.SECONDS));
+    }
+    @PreDestroy void close() { pool.shutdown(); }   // always shut pools down
+}`},
+ {t:`cards`,items:[
+   {h:`Executors.newFixedThreadPool`,b:`Uses an <b>unbounded</b> queue. Under load the queue grows until memory runs out. The maximum size is never used.`},
+   {h:`Executors.newCachedThreadPool`,b:`Unbounded <b>threads</b>. A burst can create thousands and exhaust the machine.`},
+   {h:`Rejection policies`,b:`<code>AbortPolicy</code> (default, throws), <code>CallerRunsPolicy</code>, <code>DiscardPolicy</code>, <code>DiscardOldestPolicy</code>.`}]},
+ {t:`p`,h:`<h2>How big should the pool be?</h2>`},
+ {t:`two`,a:{h:`CPU-bound work`,b:`Threads about equal to the number of cores, or cores plus one. More only adds switching cost.`},b:{h:`I/O-bound work`,b:`Threads = cores x (1 + wait time / compute time). If a task waits 90 ms and computes 10 ms, that is cores x 10. Then measure and adjust.`}},
+ {t:`p`,h:`<h2>Locks beyond synchronized</h2>`},
+ {t:`code`,cap:`ReentrantLock gives control that synchronized cannot`,code:`private final ReentrantLock lock = new ReentrantLock();
+
+boolean transfer(Account a, Account b, long amt) throws InterruptedException {
+    if (!lock.tryLock(1, TimeUnit.SECONDS)) return false;   // give up instead of waiting forever
+    try {
+        // ... move the money
+        return true;
+    } finally {
+        lock.unlock();        // always in finally
+    }
+}
+// Also available: ReadWriteLock (many readers, one writer) and StampedLock (optimistic reads)`},
+ {t:`p`,h:`<h2>Deadlock: the classic</h2>`},
+ {t:`plain`,h:`Thread A holds lock 1 and waits for lock 2. Thread B holds lock 2 and waits for lock 1. Nobody moves, forever. It needs four things together: mutual exclusion, hold-and-wait, no preemption and a circular wait. Break any one and it cannot happen.`},
+ {t:`code`,bad:true,cap:`Bad: opposite lock order`,code:`void transfer(Account from, Account to, long amt) {
+    synchronized (from) {
+        synchronized (to) {          // another thread transferring to -> from locks them the other way
+            from.debit(amt); to.credit(amt);
+        }
+    }
+}`},
+ {t:`code`,good:true,cap:`Good: a fixed order for every thread`,code:`void transfer(Account from, Account to, long amt) {
+    Account first  = from.id() < to.id() ? from : to;     // always lock the lower id first
+    Account second = first == from ? to : from;
+    synchronized (first) { synchronized (second) {
+        from.debit(amt); to.credit(amt);
+    }}
+}`},
+ {t:`p`,h:`<h2>Producer-consumer with a BlockingQueue</h2>`},
+ {t:`code`,use:true,cap:`How it is used: orders in, workers out, no manual wait/notify`,code:`BlockingQueue<Order> queue = new ArrayBlockingQueue<>(100);   // bounded: producers slow down when full
+
+// Producer (for example a web controller)
+queue.put(order);              // blocks when full
+
+// Consumer (a few worker threads)
+while (true) {
+    Order o = queue.take();    // blocks when empty
+    process(o);
+}`},
+ {t:`mistake`,h:`Doing slow work or a database call while holding a lock, or swallowing <code>InterruptedException</code>. When you catch it, either rethrow it or call <code>Thread.currentThread().interrupt()</code> so the interruption is not lost.`},
+ {t:`check`,q:`A pool has core 4, max 10 and a <code>LinkedBlockingQueue</code> with no capacity. Under heavy load only 4 threads ever run. Why?`,a:`With an unbounded queue the queue never reports "full", so the pool never creates threads beyond core. The extra threads only appear when the queue is full. Use a bounded queue, and choose a rejection policy for overflow.`}
+]},
+
+/* ---------- 4 ---------- */
+{id:`lesson-4`,track:`conc`,trackName:`Concurrency and JVM`,title:`JVM memory: heap, stack, metaspace and the JIT`,min:14,
+ promise:`A picture of where everything lives. With it, every OutOfMemoryError message stops being a mystery.`,
+ blocks:[
+ {t:`plain`,h:`When your program runs, the JVM carves memory into areas. Objects live in the <b>heap</b>. Each thread has its own <b>stack</b> for method calls and local variables. Class definitions live in <b>metaspace</b>. Knowing which area is full tells you which fix to try.`},
+ {t:`diagram`,cap:`New objects start in Eden. Survivors are copied between survivor spaces, and old survivors are promoted to the old generation.`,d:{w:420,alt:`JVM memory areas: heap with young and old generation, metaspace and thread stacks`,nodes:[
+   {id:`h`,t:`Heap`,s:`-Xms / -Xmx`,x:6,y:6,w:230,m:[`Young: Eden + 2 survivors`,`  new objects, most die here`,`Old: long-lived objects`,`  promoted after a few GCs`]},
+   {id:`m`,t:`Metaspace`,s:`native memory`,x:260,y:6,w:150,m:[`class metadata`,`grows as needed`]},
+   {id:`s`,t:`Thread stacks`,s:`-Xss, one per thread`,x:6,y:128,w:230,m:[`frames: locals, call chain`,`StackOverflowError when too deep`]},
+   {id:`d`,t:`Direct memory`,x:260,y:128,w:150,m:[`NIO buffers, Netty`,`outside the heap`]}],
+  edges:[]}},
+ {t:`cards`,items:[
+   {h:`Heap`,b:`All objects and arrays. Shared by all threads. Managed by the garbage collector. Sized with <code>-Xms</code> (start) and <code>-Xmx</code> (max).`},
+   {h:`Stack`,b:`One per thread. Holds method frames, local variables and references. Freed automatically when a method returns. Deep recursion causes <code>StackOverflowError</code>.`},
+   {h:`Metaspace`,b:`Class metadata. It replaced PermGen in Java 8 and lives in native memory, so it grows by default. Cap with <code>-XX:MaxMetaspaceSize</code>.`},
+   {h:`References`,b:`The variable holds a reference on the stack. The object it points to is on the heap. Objects are collected when no live reference reaches them.`}]},
+ {t:`p`,h:`<h2>The OutOfMemoryError family: what each message means</h2>`},
+ {t:`cards`,items:[
+   {h:`Java heap space`,b:`The heap is full of live objects. Either a leak, or the heap is simply too small for the data.`},
+   {h:`GC overhead limit exceeded`,b:`The JVM spends nearly all its time collecting and recovers almost nothing. Same family as above.`},
+   {h:`Metaspace`,b:`Too many classes loaded, often from a classloader leak, or heavy dynamic proxies and redeploys.`},
+   {h:`unable to create native thread`,b:`The OS refused another thread. Too many threads, or not enough native memory. Not a heap problem.`},
+   {h:`Direct buffer memory`,b:`Off-heap buffers are exhausted. Seen with NIO and Netty.`}]},
+ {t:`p`,h:`<h2>Class loading and the JIT, briefly</h2>`},
+ {t:`steps`,items:[
+   [`Load.`,` A class loader reads the <code>.class</code> file. Loaders form a parent chain (bootstrap, platform, application) and ask the parent first. That is <b>parent delegation</b>, and it stops you from replacing <code>java.lang.String</code>.`],
+   [`Link.`,` Verify the bytecode, prepare static fields, resolve references.`],
+   [`Initialise.`,` Run static initialisers, once, the first time the class is used.`],
+   [`Interpret then compile.`,` The JVM first interprets bytecode. Hot methods are compiled to machine code by the <b>JIT</b> (C1 and C2 compilers). That is why Java is slow for the first seconds, and why benchmarks need a warm-up.`]]},
+ {t:`code`,use:true,cap:`How it is used: the flags you will actually put in a container`,code:`# Dockerfile ENTRYPOINT for a Spring Boot service on Java 17
+java -XX:MaxRAMPercentage=75 \\
+     -XX:+UseG1GC \\
+     -XX:+HeapDumpOnOutOfMemoryError \\
+     -XX:HeapDumpPath=/dumps \\
+     -Xlog:gc*:file=/logs/gc.log:time,uptime \\
+     -jar app.jar
+# MaxRAMPercentage: size the heap from the container limit instead of the host machine.
+# HeapDumpOnOutOfMemoryError: leaves a file you can analyse after the crash.`},
+ {t:`mistake`,h:`Setting <code>-Xmx</code> equal to the container memory limit. The JVM also needs room for metaspace, thread stacks, direct memory and the code cache. A heap at 100 percent of the limit gets the process killed by the container runtime. About 70 to 75 percent is a common start.`},
+ {t:`check`,q:`Your service shows 2 GB heap free but throws "unable to create native thread". What is wrong?`,a:`This is not a heap shortage. The process could not get another OS thread, usually because far too many threads were created (an unbounded pool or a thread leak), or the container or OS thread limit was hit. Check the thread count, find who creates threads with a thread dump, and bound the pools.`}
+]},
+
+/* ---------- 5 ---------- */
+{id:`lesson-5`,track:`conc`,trackName:`Concurrency and JVM`,title:`Garbage collection: how it works and which collector to pick`,min:16,
+ promise:`What the collector does, the vocabulary of pauses, and a clear way to choose between G1 and ZGC.`,
+ blocks:[
+ {t:`plain`,h:`The garbage collector finds objects that nothing can reach any more and frees their memory. It starts from <b>GC roots</b> (live thread stacks, static fields) and follows references. Anything it cannot reach is garbage. This is called <b>reachability</b>, and it is why circular references are not a problem in Java.`},
+ {t:`analogy`,h:`Imagine a big party hall. Guests who are still talking to someone connected to the host stay. Anyone standing alone with no connection to the main group gets politely shown out and their seat is cleared.`},
+ {t:`p`,h:`<h2>Why the heap has generations</h2>`},
+ {t:`plain`,h:`Studies of programs show that <b>most objects die young</b>: request objects, temporary strings. So the heap is split. A <b>minor GC</b> cleans only the young generation. It is quick, because most of it is dead. Objects that survive several rounds move to the old generation, which is cleaned rarely by a <b>major</b> or <b>mixed</b> collection.`},
+ {t:`p`,h:`<h2>The collectors</h2>`},
+ {t:`cards`,items:[
+   {h:`Serial`,pic:`Tiny and single-threaded`,b:`For very small heaps or single-core containers.`},
+   {h:`Parallel`,pic:`Throughput first`,b:`Many threads collect while the app is paused. Default up to Java 8. Good for batch jobs where long pauses are fine.`},
+   {h:`G1`,pic:`The default since Java 9`,b:`Heap is split into many regions. It collects the regions with the most garbage first and aims for a pause target (<code>-XX:MaxGCPauseMillis</code>, default 200 ms). A good all-round choice.`},
+   {h:`ZGC`,pic:`Very short pauses`,b:`Does nearly all work concurrently with the app. Pauses stay under a few milliseconds even for huge heaps. Production-ready since 15, and generational in Java 21 (<code>-XX:+UseZGC -XX:+ZGenerational</code>).`},
+   {h:`Shenandoah`,pic:`Another low-pause one`,b:`Similar goals to ZGC, available in OpenJDK builds.`}]},
+ {t:`remember`,h:`The choice is a triangle: <b>throughput</b> (total work done), <b>latency</b> (pause length) and <b>footprint</b> (memory used). You cannot maximise all three. Batch jobs pick throughput. User-facing APIs pick latency.`},
+ {t:`p`,h:`<h2>Choosing, in plain steps</h2>`},
+ {t:`steps`,items:[
+   [`Start with the default.`,` G1 on modern Java. Do not tune blindly.`],
+   [`Measure first.`,` Turn on GC logs. Look at pause times, how often GC runs and how much is freed.`],
+   [`If pauses hurt users.`,` Try ZGC. It trades a little throughput and memory for tiny pauses.`],
+   [`If it is a batch job.`,` Parallel may finish sooner.`],
+   [`If memory keeps rising.`,` That is a leak, not a tuning problem. Take a heap dump.`]]},
+ {t:`code`,use:true,cap:`How it is used: reading a GC log line`,code:`[2.431s][info][gc] GC(12) Pause Young (Normal) (G1 Evacuation Pause) 612M->140M(1024M) 8.3ms
+
+# 612M->140M   heap used before and after: 472 MB freed. Healthy.
+# (1024M)      current heap capacity
+# 8.3ms        stop-the-world pause. Fine for an API.
+
+# Warning signs:
+#  - "Pause Full" lines: a stop-the-world full collection. Investigate.
+#  - heap AFTER collection climbs higher each time: leak.
+#  - GC taking more than ~5-10 percent of the time: heap too small or too much allocation.`},
+ {t:`p`,h:`<h2>Finding a memory leak</h2>`},
+ {t:`steps`,items:[
+   [`See the pattern.`,` Heap after each full GC keeps rising: a leak. A saw-tooth that returns to the same base: healthy.`],
+   [`Take a heap dump.`,` <code>jcmd &lt;pid&gt; GC.heap_dump /tmp/heap.hprof</code>, or let <code>-XX:+HeapDumpOnOutOfMemoryError</code> do it.`],
+   [`Open it in Eclipse MAT or VisualVM.`,` Look at the dominator tree: which objects hold the most memory, and what keeps them alive (path to GC roots).`],
+   [`Find the owner.`,` Typically a static map, a cache without eviction, a listener never removed, or a ThreadLocal in a pool thread.`],
+   [`Fix and verify.`,` Add a size limit or eviction, remove the reference, then watch the heap over time.`]]},
+ {t:`code`,bad:true,cap:`A leak that looks harmless`,code:`class SessionRegistry {
+    private static final Map<String, UserSession> ACTIVE = new HashMap<>();   // lives forever
+    static void login(String id, UserSession s) { ACTIVE.put(id, s); }
+    // no logout, no expiry: every login stays in memory
+}
+// Fix: a bounded cache with expiry, for example Caffeine
+//   Cache<String, UserSession> c = Caffeine.newBuilder().maximumSize(10_000)
+//                                          .expireAfterAccess(30, TimeUnit.MINUTES).build();`},
+ {t:`mistake`,h:`Calling <code>System.gc()</code> to "fix" memory. It only requests a collection, usually a full and slow one, and it hides the real problem. Another mistake: believing Java cannot leak. It can, whenever something still holds a reference to data you no longer need.`},
+ {t:`check`,q:`After each GC the heap used goes 300 MB, 380 MB, 460 MB, 540 MB. Is raising <code>-Xmx</code> a fix?`,a:`No, it only delays the crash. The live data is growing, which means something keeps references to objects that should be gone. Take a heap dump and find what holds them. Raise the heap only after you have confirmed the data is genuinely needed.`}
+]},
+
+/* ---------- 6 ---------- */
+{id:`lesson-6`,track:`conc`,trackName:`Concurrency and JVM`,title:`Three production incidents, diagnosed step by step`,min:15,
+ promise:`Interviewers love "the service is slow, what do you do?". Here are three with a repeatable method. Each uses tools you can name.`,
+ blocks:[
+ {t:`remember`,h:`The method is always the same: <b>look before you change</b>. Check the symptom, take evidence (thread dump, heap dump, GC log, metrics), form a guess, test the guess, and only then change something. Interviewers are listening for this order.`},
+ {t:`p`,h:`<h2>Incident 1: CPU stuck at 100 percent</h2>`},
+ {t:`steps`,items:[
+   [`Confirm.`,` Is it your Java process? <code>top -H -p &lt;pid&gt;</code> shows CPU per thread.`],
+   [`Match the thread.`,` Convert the busiest thread id to hex (<code>printf "%x" 12345</code>).`],
+   [`Thread dump.`,` <code>jstack &lt;pid&gt;</code> or <code>jcmd &lt;pid&gt; Thread.print</code>. Find the thread whose <code>nid</code> equals that hex. Read its stack.`],
+   [`Common causes.`,` An infinite or very long loop, a regex with catastrophic backtracking, heavy JSON parsing in a hot path, or the GC itself eating CPU (check GC threads).`],
+   [`Fix and prevent.`,` Fix the code, add limits and timeouts, and alert on CPU per pod.`]]},
+ {t:`p`,h:`<h2>Incident 2: OutOfMemoryError in production</h2>`},
+ {t:`steps`,items:[
+   [`Read the message.`,` Heap space, metaspace, native thread and direct memory each point to a different area (lesson 4).`],
+   [`Get the evidence.`,` The heap dump from <code>HeapDumpOnOutOfMemoryError</code>. If it was not enabled, enable it now.`],
+   [`Analyse.`,` Open in Eclipse MAT. The leak suspects report and dominator tree show who holds the memory.`],
+   [`Check recent changes.`,` A new cache, a query that now loads a million rows, a missing pagination.`],
+   [`Fix.`,` Stream or page the data, bound caches, then retest under load. Raise memory only as a last step.`]]},
+ {t:`p`,h:`<h2>Incident 3: the service hangs but CPU is low</h2>`},
+ {t:`plain`,h:`Low CPU and no progress usually means threads are <b>waiting</b>: for a lock, a database connection, a downstream call with no timeout, or a full pool.`},
+ {t:`steps`,items:[
+   [`Take two or three thread dumps`,` about 10 seconds apart. One dump is a snapshot. Several show who is truly stuck.`],
+   [`Look for deadlock.`,` <code>jstack</code> prints "Found one Java-level deadlock" and names the locks and threads.`],
+   [`Look at the states.`,` Many threads <code>BLOCKED</code> on the same lock: contention. Many <code>WAITING</code> in <code>HikariPool.getConnection</code>: the database pool is exhausted. Many in a socket read: a downstream call without a timeout.`],
+   [`Check the pools.`,` Tomcat threads, HikariCP active versus max, your own executors' queue sizes.`],
+   [`Fix.`,` Add timeouts everywhere, fix lock order, size pools to match, and add circuit breakers.`]]},
+ {t:`code`,use:true,cap:`How it is used: the commands in order`,code:`jps -l                                   # find the Java process id
+top -H -p 4821                           # busiest threads
+jstack 4821 > dump1.txt                  # thread dump (repeat a few times)
+jcmd 4821 GC.heap_info                   # quick heap summary
+jcmd 4821 GC.heap_dump /tmp/heap.hprof   # full heap dump (pauses the app briefly)
+jcmd 4821 JFR.start duration=60s filename=/tmp/run.jfr   # Flight Recorder: low-overhead profile`},
+ {t:`cards`,items:[
+   {h:`In Kubernetes`,b:`Use <code>kubectl exec</code> into the pod to run jcmd. Make sure the image has a JDK or use an ephemeral debug container.`},
+   {h:`Metrics to watch`,b:`Heap used, GC pause time, thread count, pool queue sizes, DB pool active connections, request latency percentiles (p95, p99).`}]},
+ {t:`mistake`,h:`Restarting the service first and investigating later. A restart destroys the evidence. If you must restart to restore service, capture a thread dump and heap info first, or keep one pod out of rotation for study.`},
+ {t:`check`,q:`Thread dumps show 190 of 200 Tomcat threads waiting inside <code>HikariPool.getConnection</code>. What do you suspect, and what do you check?`,a:`The database connection pool is exhausted. Check for connections held too long: slow queries, a transaction that wraps a remote call, or connections not returned. Look at Hikari metrics (active, pending), the slowest queries, and the transaction boundaries. Raising the pool size without fixing the cause usually just moves the pressure to the database.`}
+]},
+
+/* ---------- 7 ---------- */
+{id:`lesson-7`,track:`conc`,trackName:`Concurrency and JVM`,title:`Concurrency and JVM questions with full answers`,min:45,
+ promise:`Twelve questions as they are asked. Try each aloud, then open the walk-through.`,
+ blocks:[
+ {t:`qbank`,items:[
+ {n:`synchronized vs volatile vs Atomic`,tag:`Concurrency`,where:`The most repeated concurrency question in multithreading interview guides`,
+  ask:`What is the difference between synchronized, volatile and atomic variables? When would you use each?`,
+  quality:`Separate visibility from atomicity and say what each guarantees.`,
+  steps:[[`volatile.`,` Visibility and ordering for one variable. No atomicity for compound actions.`],[`synchronized.`,` Mutual exclusion plus visibility. Good for multi-step updates, but threads block.`],[`Atomic classes.`,` Lock-free atomic updates of one variable using CAS. Best for counters and flags.`],[`Choose.`,` A shared stop flag: volatile. A counter: AtomicInteger or LongAdder. Updating two fields consistently: synchronized or a lock.`]],
+  trade:`Locks are simple and general but can block and deadlock. CAS never blocks but retries under contention.`,
+  follow:`What is happens-before? Why does double-checked locking need volatile? What is the ABA problem?`},
+ {n:`How does a ThreadPoolExecutor work?`,tag:`Concurrency`,where:`Standard in service and product company rounds`,
+  ask:`Explain core size, max size and queue. What happens when a task is submitted? How do you size a pool?`,
+  quality:`The exact order (core, queue, max, reject) and why unbounded queues are dangerous.`,
+  steps:[[`Order.`,` Fewer than core threads: start a new thread. Otherwise queue it. If the queue is full and threads are below max: start another. Else reject.`],[`Queue effect.`,` An unbounded queue means max is never used and memory can run out.`],[`Rejection.`,` Abort, caller-runs, discard, discard-oldest, or your own handler.`],[`Sizing.`,` CPU-bound: about the number of cores. I/O-bound: cores x (1 + wait/compute). Then load test.`],[`Shutdown.`,` <code>shutdown()</code> lets queued tasks finish. <code>shutdownNow()</code> interrupts.`]],
+  trade:`Large pools increase context switching and downstream pressure. Small pools increase latency.`,
+  follow:`Why is Executors.newFixedThreadPool discouraged? How do you monitor a pool? What does CallerRunsPolicy do for back-pressure?`},
+ {n:`Deadlock: cause, detection, prevention`,tag:`Concurrency`,where:`A classic, often with a coding component`,
+  ask:`What is a deadlock? Write one, then show how to prevent and detect it.`,
+  quality:`Name the four conditions and a concrete prevention.`,
+  steps:[[`Definition.`,` Threads wait on each other's locks in a cycle, forever.`],[`Four conditions.`,` Mutual exclusion, hold and wait, no preemption, circular wait.`],[`Prevent.`,` Acquire locks in a global order. Use <code>tryLock</code> with a timeout. Keep critical sections small. Avoid calling unknown code while holding a lock.`],[`Detect.`,` <code>jstack</code> or <code>jcmd Thread.print</code> reports Java-level deadlocks. <code>ThreadMXBean.findDeadlockedThreads()</code> from code.`]],
+  code:{cap:`Detecting deadlocks from inside the app`,code:`ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+long[] ids = bean.findDeadlockedThreads();      // null if none
+if (ids != null) {
+    for (ThreadInfo info : bean.getThreadInfo(ids)) {
+        log.error("Deadlocked: {} waiting for {} held by {}",
+                  info.getThreadName(), info.getLockName(), info.getLockOwnerName());
+    }
+}`,use:`// Run it on a schedule (every minute) and raise an alert if it ever finds anything.
+// Actuator's thread dump endpoint (/actuator/threaddump) gives the same evidence on demand.`},
+  trade:`Lock ordering is cheap but needs discipline. Timeouts avoid hanging but you must handle the failure path.`,
+  follow:`What is livelock? What is starvation? Can a database deadlock too? (yes, and the DB aborts one transaction)`},
+ {n:`Why can't you always use parallelism? Amdahl and cost`,tag:`Concurrency`,where:`Appears in performance discussions for senior roles`,
+  ask:`More threads should mean faster, right? Why not?`,
+  quality:`Name the real limits and show you measure.`,
+  steps:[[`Serial parts.`,` Amdahl's law: the part that cannot run in parallel caps the speed-up.`],[`Contention.`,` Threads fighting over locks or one database wait instead of working.`],[`Switching cost.`,` More threads than cores means the OS spends time swapping them.`],[`Shared resources.`,` The database or downstream service becomes the bottleneck.`],[`Measure.`,` Load test with different pool sizes and watch throughput and latency percentiles.`]],
+  trade:`More parallelism raises throughput until a resource saturates, then latency climbs.`,
+  follow:`How do you find the bottleneck? What is back-pressure?`},
+ {n:`Producer-consumer implementation`,tag:`Machine coding`,where:`A frequent machine-coding task`,
+  ask:`Implement producer-consumer. Then do it without BlockingQueue.`,
+  quality:`Use BlockingQueue first, then show wait/notify correctly with a while loop.`,
+  steps:[[`Easy way.`,` <code>ArrayBlockingQueue</code> with <code>put</code> and <code>take</code>. Bounded size gives back-pressure.`],[`Manual way.`,` A shared list guarded by a lock. Producers <code>wait()</code> while full, consumers <code>wait()</code> while empty, and each calls <code>notifyAll()</code> after a change.`],[`Always a while loop.`,` Re-check the condition after waking, because of spurious wakeups.`],[`Shutdown.`,` Use a poison pill or interrupt so consumers can stop.`]],
+  code:{cap:`Manual version`,code:`class Buffer<T> {
+    private final Queue<T> q = new ArrayDeque<>();
+    private final int cap;
+    Buffer(int cap) { this.cap = cap; }
+
+    synchronized void put(T t) throws InterruptedException {
+        while (q.size() == cap) wait();      // while, not if
+        q.add(t);
+        notifyAll();
+    }
+    synchronized T take() throws InterruptedException {
+        while (q.isEmpty()) wait();
+        T t = q.remove();
+        notifyAll();
+        return t;
+    }
+}`,use:`Buffer<String> b = new Buffer<>(5);
+new Thread(() -> { for (int i = 0; i < 20; i++) b.put("job-" + i); }).start();   // producer
+new Thread(() -> { while (true) System.out.println(b.take()); }).start();        // consumer`},
+  trade:`Manual wait/notify teaches the mechanics but is error-prone. In real code use BlockingQueue or a framework.`,
+  follow:`Why notifyAll rather than notify? Use two Conditions instead? What about multiple consumers?`},
+ {n:`ConcurrentHashMap, CopyOnWriteArrayList and friends`,tag:`Concurrency`,where:`Paired with the collections questions`,
+  ask:`Which thread-safe collection would you use for a cache, a listener list and a work queue?`,
+  quality:`Match the data structure to the access pattern.`,
+  steps:[[`Cache.`,` <code>ConcurrentHashMap</code>, or Caffeine for eviction and expiry.`],[`Listeners.`,` <code>CopyOnWriteArrayList</code>: reads far outnumber writes, and iteration never fails.`],[`Work queue.`,` <code>LinkedBlockingQueue</code> or <code>ArrayBlockingQueue</code>. <code>ConcurrentLinkedQueue</code> if you never need to block.`],[`Why not synchronizedList.`,` Iteration still needs a manual lock, and every call contends on one lock.`]],
+  trade:`Copy-on-write costs memory and time on each write. Concurrent maps give weakly consistent views.`,
+  follow:`What is a weakly consistent iterator? When would you use a ReadWriteLock?`},
+ {n:`ThreadLocal: use and danger`,tag:`Concurrency`,where:`Appears with Spring request context and logging questions`,
+  ask:`What is ThreadLocal? What can go wrong in a thread pool?`,
+  quality:`Know the leak: pool threads live long.`,
+  steps:[[`What.`,` Each thread has its own copy of a value. Used for the security context, MDC logging, transaction context.`],[`Pool risk.`,` Pool threads are reused. If you do not <code>remove()</code>, the next request sees the previous user's data, and large values stay in memory.`],[`Pattern.`,` Set in a filter, clear in a <code>finally</code>.`],[`Virtual threads.`,` Possible but with millions of threads the memory adds up. Consider scoped values in newer Java.`]],
+  trade:`Convenient hidden context versus hidden coupling that fails when work moves to another thread.`,
+  follow:`Why does @Async lose the security context? How does Spring propagate it?`},
+ {n:`Explain JVM memory areas`,tag:`JVM`,where:`Near-universal in experienced Java rounds`,
+  ask:`Describe the JVM memory areas. Where do objects, locals and classes live?`,
+  quality:`Draw the layout, then link each area to its error.`,
+  steps:[[`Heap.`,` Objects. Young (Eden and two survivors) and old generation.`],[`Stack.`,` Per thread: frames, locals, references. <code>StackOverflowError</code>.`],[`Metaspace.`,` Class metadata, native memory since Java 8, replaced PermGen.`],[`Others.`,` Code cache for JIT output, direct memory, and the program counter per thread.`],[`Errors.`,` Heap space, Metaspace, native thread, direct buffer: one per area.`]],
+  trade:`A big heap lowers GC frequency but lengthens some pauses and takes memory from other uses.`,
+  follow:`What is escape analysis? Where do static variables live? What is the string pool's location now? (heap)`},
+ {n:`How does garbage collection work? G1 vs ZGC`,tag:`JVM`,where:`Asked for 5 plus years in nearly every JVM section`,
+  ask:`How does the GC decide what to free? Compare G1 and ZGC. Which would you use for a payments API?`,
+  quality:`Reachability, generations, then a reasoned choice using pause targets.`,
+  steps:[[`Reachability.`,` Start at GC roots and mark everything reachable. The rest is garbage.`],[`Generations.`,` Most objects die young, so minor collections are cheap.`],[`G1.`,` Region-based, aims for a pause target, mixes young and old collection. The default.`],[`ZGC.`,` Mostly concurrent, pauses of a few milliseconds regardless of heap size, generational in Java 21.`],[`Payments API.`,` Start with G1. If p99 latency shows GC pauses, evaluate ZGC with a load test.`]],
+  trade:`ZGC gives tiny pauses but uses more CPU and memory overhead. G1 is balanced and well understood.`,
+  follow:`What is a stop-the-world pause? What is a concurrent mark? What are the GC roots?`},
+ {n:`Diagnose a memory leak`,tag:`JVM`,where:`The top scenario question in senior Java rounds`,
+  ask:`Memory in production climbs for two days and then crashes. How do you find the cause?`,
+  quality:`A method, named tools, and a typical culprit.`,
+  steps:[[`Confirm.`,` The heap after full GCs keeps rising.`],[`Capture.`,` A heap dump with <code>jcmd GC.heap_dump</code>, or enable dump on OOM.`],[`Analyse.`,` Eclipse MAT: leak suspects, dominator tree, path to GC roots.`],[`Typical causes.`,` Static collections, unbounded caches, unremoved listeners, ThreadLocal in pools, unclosed resources.`],[`Fix and verify.`,` Add eviction or remove the reference, and watch the heap over days.`]],
+  trade:`A heap dump pauses the app and is large, so take it from one instance taken out of rotation.`,
+  follow:`Difference between a leak and just a big working set? How do weak references help? What does a classloader leak look like?`},
+ {n:`Heap, GC and flags for a container`,tag:`JVM`,where:`Common once Kubernetes appears in the profile`,
+  ask:`Your Java pod has a 2 GB limit and keeps getting OOMKilled. What do you check?`,
+  quality:`Know that the process is bigger than the heap.`,
+  steps:[[`Difference.`,` OOMKilled means the container went over its limit. A Java OutOfMemoryError is thrown inside the JVM. They are different failures.`],[`Total memory.`,` Heap plus metaspace plus thread stacks plus direct buffers plus code cache.`],[`Set sizes.`,` Use <code>-XX:MaxRAMPercentage</code> around 70 to 75, not heap equal to the limit.`],[`Check threads and buffers.`,` Thread count x stack size, and Netty or NIO direct memory.`],[`Verify.`,` Use native memory tracking (<code>-XX:NativeMemoryTracking=summary</code>) and container metrics.`]],
+  trade:`Leaving headroom wastes a little memory but avoids sudden kills.`,
+  follow:`Does Java 8 respect container limits? (8u191 and later do) What is the effect of CPU limits on GC threads?`},
+ {n:`What do virtual threads change for pools and locks?`,tag:`Java 21`,where:`The newest Java 21 concurrency question`,
+  ask:`With virtual threads, do we still need thread pools, and what about synchronized?`,
+  quality:`Do not pool them, but limit concurrency, and know about pinning.`,
+  steps:[[`No pooling.`,` One virtual thread per task is the intended use.`],[`Still limit.`,` A semaphore protects a database or API from being flooded.`],[`Pinning.`,` In Java 21, blocking inside <code>synchronized</code> pins the carrier. Prefer <code>ReentrantLock</code> for long waits.`],[`Platform pools remain.`,` For CPU-bound work, a pool sized to cores still makes sense.`]],
+  trade:`Simple blocking code scales, but CPU-bound work and heavy ThreadLocal use do not benefit.`,
+  follow:`How do you detect pinning? (<code>-Djdk.tracePinnedThreads</code>) What is structured concurrency?`}
+ ]},
+ {t:`p`,h:`<h2>Where this came from</h2><p>Topics came from current multithreading, JVM and garbage collection interview guides for senior Java roles. They are general rather than Pune-specific. The incident walk-throughs are written as a method, using standard JDK tools.</p>`},
+ {t:`links`,items:[
+  [`Top 40 Java multithreading interview questions (2026), mfgrobots`,`https://www.mfgrobots.com/Article/ooip/java/53181.html`],
+  [`Interview Q&A: multithreading and concurrency, Nitin K C`,`https://nitinkc.github.io/MultithreadingLearningHub/interview-prep/`],
+  [`10 Java interview questions for 10 years experience (2026), ThirstySprout`,`https://www.thirstysprout.com/post/java-interview-questions-for-10-years-experience`],
+  [`Java interview questions: JVM internals, concurrency and design patterns, techinterview.org`,`https://www.techinterview.org/post/3233460836/java-interview-questions-advanced/`],
+  [`Java garbage collection interview questions, TheServerSide`,`https://www.theserverside.com/feature/Java-garbage-collection-interview-questions-and-answers/`],
+  [`Java interview questions, memory and garbage collection section`,`https://viacheslavchernyshov.github.io/java-interview-questions-and-answers/questions/03-memory-and-garbage-collection/`]]}
+]}
+
+];
+
+/* ================= RENDER ================= */
+var STAGES=[
+ {l:'1 server',hurt:'Nothing yet.',fix:'One app server and one database is a perfectly good start. Spend your effort on a clean data model and the right indexes.',cost:'None, and that is the point. Every extra part is something to run and debug.'},
+ {l:'Slow queries',hurt:'Pages slow down because the app and database share one machine, and some queries scan whole tables.',fix:'Add indexes. Move the database to its own machine. Use a bigger machine if needed.',cost:'A bigger machine has a ceiling, and one failure still takes everything down.'},
+ {l:'Read-heavy',hurt:'The database is busy answering the same read questions again and again.',fix:'Add a cache for popular data. Add read replicas (copies for reading).',cost:'Data can be slightly stale. You now have to decide when to refresh the cache.'},
+ {l:'One server is not enough',hurt:'One app server cannot take the traffic, and if it dies, the site is down.',fix:'Run several identical app servers behind a load balancer. Keep them stateless, so any server can handle any request.',cost:'You must move user sessions out of server memory, and handle deployments carefully.'},
+ {l:'Slow work blocks users',hurt:'Sending emails or making reports makes users wait. Spikes of traffic can overwhelm the database.',fix:'Put slow work on a queue and let workers process it in the background.',cost:'Duplicates can happen, so workers must be safe to run twice. Users see "pending" for a while.'},
+ {l:'Data too big',hurt:'One database cannot hold all the data or take all the writes.',fix:'Split the data across several databases by a key, such as user id. This is sharding.',cost:'Queries across shards are hard, and a popular key can overload one shard.'},
+ {l:'Global users',hurt:'Users far from your servers get slow responses, and one data-center outage takes everyone down.',fix:'Serve static files from a CDN. Run in more than one region and route users to the nearest one.',cost:'Data in different regions can briefly disagree, and the bill grows a lot.'}
+];
+
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+
+function fmt(n){
+  if(n>=1e9)return (n/1e9).toFixed(1)+' B';
+  if(n>=1e6)return (n/1e6).toFixed(1)+' M';
+  if(n>=1e3)return (n/1e3).toFixed(1)+' K';
+  return n<10?n.toFixed(1):String(Math.round(n));
+}
+function fmtBytes(n){var u=['B','KB','MB','GB','TB','PB'],i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(1):Math.round(n))+' '+u[i]}
+
+function renderBlock(b,host){
+  var n;
+  switch(b.t){
+  case 'p': host.appendChild(el('div','sec',b.h));break;
+  case 'plain': n=el('div','box');n.appendChild(el('div','label','In plain words'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'analogy': n=el('div','box plain');n.appendChild(el('div','label','Picture it'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'mistake': n=el('div','box mistake');n.appendChild(el('div','label','Common mistake'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'remember': n=el('div','box remember');n.appendChild(el('div','label','Remember this'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'steps':
+    n=el('ol','steps');
+    b.items.forEach(function(s){var li=el('li',null,'<div><b>'+s[0]+'</b>'+s[1]+'</div>');n.appendChild(li)});
+    host.appendChild(n);break;
+  case 'two':
+    n=el('div','two');
+    [b.a,b.b].forEach(function(x){n.appendChild(el('div',null,'<div class="h">'+x.h+'</div><p>'+x.b+'</p>'))});
+    host.appendChild(n);break;
+  case 'cards':
+    n=el('div','cards');
+    b.items.forEach(function(c){
+      n.appendChild(el('div','card','<h3>'+c.h+'</h3>'+(c.pic?'<div class="pic">'+c.pic+'</div>':'')+'<p>'+c.b+'</p>'+(c.small?'<p class="small">'+c.small+'</p>':'')));
+    });
+    host.appendChild(n);break;
+  case 'code':
+    n=el('div','sec');
+    var cap=el('div','cap'+(b.bad?' bad':'')+(b.good?' good':''),b.cap||'');
+    if(b.use)cap.className+=' use';
+    var pre=document.createElement('pre');pre.textContent=b.code;if(b.use)pre.className='use';
+    n.appendChild(cap);n.appendChild(pre);host.appendChild(n);break;
+  case 'check':
+    n=el('div','check');
+    n.appendChild(el('div','label','Check yourself'));
+    n.appendChild(el('p','q',b.q));
+    var btn=el('button','reveal','Think, then show the answer');btn.type='button';
+    var ans=el('div','ans',b.a);ans.hidden=true;
+    btn.addEventListener('click',function(){ans.hidden=!ans.hidden;btn.textContent=ans.hidden?'Think, then show the answer':'Hide the answer'});
+    n.appendChild(btn);n.appendChild(ans);host.appendChild(n);break;
+  case 'qbank': host.appendChild(buildQbank(b.items));break;
+  case 'diagram': host.appendChild(buildDiagram(b));break;
+  case 'links':
+    n=el('div','links');
+    b.items.forEach(function(x){var a=document.createElement('a');a.href=x[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=x[0];n.appendChild(a)});
+    host.appendChild(n);break;
+  case 'calc': host.appendChild(buildCalc());break;
+  case 'stages': host.appendChild(buildStages());break;
+  case 'drill': host.appendChild(buildDrill());break;
+  }
+}
+
+function buildCalc(){
+  var box=el('div','check');
+  box.appendChild(el('div','label','Try it'));
+  box.appendChild(el('p',null,'Change the numbers and watch what moves. Start with the example from above.'));
+  box.appendChild(el('div','fields',
+    '<div class="field"><label for="c-dau">Daily users (millions)</label><input id="c-dau" type="number" min="0" step="any" value="10"></div>'+
+    '<div class="field"><label for="c-act">Actions per user per day</label><input id="c-act" type="number" min="0" step="any" value="20"></div>'+
+    '<div class="field"><label for="c-rpw">Reads for every 1 write</label><input id="c-rpw" type="number" min="0" step="any" value="10"></div>'));
+  var out=el('div','out');out.setAttribute('aria-live','polite');box.appendChild(out);
+  var msg=el('div','box');box.appendChild(msg);
+  function num(id){var v=parseFloat(box.querySelector(id).value);return isFinite(v)&&v>=0?v:0}
+  function run(){
+    var dau=num('#c-dau')*1e6,act=num('#c-act'),rpw=num('#c-rpw');
+    var day=dau*act,avg=day/86400,pk=avg*3,w=pk/(rpw+1),r=pk-w;
+    var data=day/(rpw+1)*1000*365;
+    out.innerHTML=
+      '<div><span>Requests per day</span><b>'+fmt(day)+'</b></div>'+
+      '<div><span>Average per second</span><b>'+fmt(avg)+'</b></div>'+
+      '<div><span>Busy-hour per second (x3)</span><b>'+fmt(pk)+'</b></div>'+
+      '<div><span>Reads per second at peak</span><b>'+fmt(r)+'</b></div>'+
+      '<div><span>Writes per second at peak</span><b>'+fmt(w)+'</b></div>'+
+      '<div><span>New data per year (1 KB per write)</span><b>'+fmtBytes(data)+'</b></div>';
+    var m;
+    if(r<1000&&w<500)m='<b>What this means:</b> one well-tuned database can handle this. Keep it simple.';
+    else if(r<10000)m='<b>What this means:</b> reads are the pressure. Add a cache and maybe read replicas.';
+    else m='<b>What this means:</b> reads are very high. You need a cache layer, and likely a CDN for static files.';
+    if(w>=5000)m+=' Writes are high too, so think about a queue and splitting the data.';
+    msg.innerHTML='<p>'+m+'</p>';
+  }
+  box.addEventListener('input',run);run();
+  return box;
+}
+
+function buildStages(){
+  var wrap=el('div','sec'),sel=2;
+  var row=el('div','row');wrap.appendChild(row);
+  var panel=el('div','check');panel.setAttribute('aria-live','polite');wrap.appendChild(panel);
+  function draw(){
+    Array.prototype.forEach.call(row.children,function(b,i){b.setAttribute('aria-pressed',i===sel?'true':'false')});
+    var s=STAGES[sel];
+    panel.innerHTML='<div><div class="label">What hurts</div><p>'+s.hurt+'</p></div>'+
+      '<div><div class="label">The fix</div><p>'+s.fix+'</p></div>'+
+      '<div><div class="label">What the fix costs</div><p>'+s.cost+'</p></div>';
+  }
+  STAGES.forEach(function(s,i){
+    var b=el('button','stage',s.l);b.type='button';
+    b.addEventListener('click',function(){sel=i;draw()});row.appendChild(b);
+  });
+  draw();return wrap;
+}
+
+function buildDiagram(b){
+  var spec=b.d,NS='http://www.w3.org/2000/svg';
+  function s(tag,attrs,text){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+  var W=spec.w||420,byId={};
+  spec.nodes.forEach(function(n){
+    var hdr=n.k==='state'?34:(n.k==='note'?0:(n.s?38:28));
+    var ml=n.m?n.m.length:0;
+    if(n.k==='state')n.h=34;
+    else if(n.k==='note')n.h=ml*14+14;
+    else n.h=hdr+(ml?10+14*ml:0);
+    n.hdr=hdr;byId[n.id]=n;
+  });
+  var H=0;spec.nodes.forEach(function(n){H=Math.max(H,n.y+n.h)});H+=14;
+  var svg=s('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':spec.alt||''});
+  var defs=s('defs',{});
+  function marker(id,w,h,rx,ry,child){
+    var m=s('marker',{id:id,viewBox:'0 0 '+w+' '+h,refX:rx,refY:ry,markerWidth:w,markerHeight:h,markerUnits:'userSpaceOnUse',orient:'auto'});
+    m.appendChild(child);defs.appendChild(m);
+  }
+  var uid='m'+Math.floor(Math.random()*1e6);
+  marker(uid+'t',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-tri'}));
+  marker(uid+'o',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11','class':'mk-open'}));
+  marker(uid+'f',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-fill'}));
+  marker(uid+'d',14,12,0,6,s('path',{d:'M1,6 L7,1 L13,6 L7,11 z','class':'mk-tri'}));
+  svg.appendChild(defs);
+  function clip(n,tx,ty){
+    var cx=n.x+n.w/2,cy=n.y+n.h/2,dx=tx-cx,dy=ty-cy;
+    if(dx===0&&dy===0)return [cx,cy];
+    var t=Math.min(dx!==0?(n.w/2)/Math.abs(dx):1e9,dy!==0?(n.h/2)/Math.abs(dy):1e9);
+    return [cx+dx*t,cy+dy*t];
+  }
+  spec.edges.forEach(function(e){
+    var A=byId[e.a],B=byId[e.b];
+    var ax=A.x+A.w/2,ay=A.y+A.h/2,bx=B.x+B.w/2,by=B.y+B.h/2;
+    var dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy)||1,o=e.o||0;
+    var nx=-dy/len*o,ny=dx/len*o;
+    var p1=clip(A,bx+nx,by+ny),p2=clip(B,ax+nx,ay+ny);
+    p1=[p1[0]+nx,p1[1]+ny];p2=[p2[0]+nx,p2[1]+ny];
+    var k=e.k||'arrow',dash=(k==='implements'||k==='uses');
+    var line=s('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],'class':'dg-e'+(dash?' dash':'')});
+    if(k==='extends'||k==='implements')line.setAttribute('marker-end','url(#'+uid+'t)');
+    else if(k==='uses')line.setAttribute('marker-end','url(#'+uid+'o)');
+    else if(k==='has'){line.setAttribute('marker-start','url(#'+uid+'d)');line.setAttribute('marker-end','url(#'+uid+'o)')}
+    else line.setAttribute('marker-end','url(#'+uid+'f)');
+    svg.appendChild(line);
+    if(e.l){
+      var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2,lw=e.l.length*5.6+10;
+      svg.appendChild(s('rect',{x:mx-lw/2,y:my-8,width:lw,height:15,rx:3,'class':'dg-lb'}));
+      svg.appendChild(s('text',{x:mx,y:my+3.5,'class':'dg-l'},e.l));
+    }
+  });
+  spec.nodes.forEach(function(n){
+    var cls=n.k==='iface'?'dg-if':(n.k==='state'?'dg-st':(n.k==='note'?'dg-note':'dg-box'));
+    svg.appendChild(s('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:n.k==='state'?17:6,'class':cls}));
+    if(n.k==='note'){
+      (n.m||[]).forEach(function(l,i){svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+16+i*14,'class':'dg-n'},l))});
+      return;
+    }
+    if(n.s)svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+15,'class':'dg-s'},'«'+n.s+'»'));
+    svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+(n.k==='state'?22:(n.s?31:19)),'class':'dg-t'},n.t));
+    if(n.m&&n.m.length){
+      svg.appendChild(s('line',{x1:n.x,y1:n.y+n.hdr,x2:n.x+n.w,y2:n.y+n.hdr,'class':'dg-sep'}));
+      n.m.forEach(function(l,i){svg.appendChild(s('text',{x:n.x+8,y:n.y+n.hdr+6+(i+1)*14-3,'class':'dg-m'},l))});
+    }
+  });
+  var wrap=el('div','diagram');
+  wrap.appendChild(svg);
+  if(b.cap)wrap.appendChild(el('p','dcap',b.cap));
+  return wrap;
+}
+
+function buildQbank(items){
+  var wrap=el('div');
+  items.forEach(function(q){
+    var d=document.createElement('details');d.className='q';
+    var s=document.createElement('summary');
+    s.innerHTML='<span class="qleft"><span>'+q.n+'</span><span class="pill">'+q.tag+'</span></span>';
+    d.appendChild(s);
+    var b=el('div','qbody');
+    b.appendChild(el('p','where','<b>Seen in:</b> '+q.where));
+    b.appendChild(el('div','qsec','<div class="label">The question</div><p>'+q.ask+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">What matters most</div><p>'+q.quality+'</p>'));
+    var st=el('div','qsec','<div class="label">Walk through it</div>');
+    var ol=el('ol','steps');
+    q.steps.forEach(function(x){ol.appendChild(el('li',null,'<div><b>'+x[0]+'</b>'+x[1]+'</div>'))});
+    st.appendChild(ol);b.appendChild(st);
+    if(q.code){
+      var c=el('div','qsec');
+      c.appendChild(el('div','cap',q.code.cap));
+      var pre=document.createElement('pre');pre.textContent=q.code.code;c.appendChild(pre);
+      if(q.code.use){
+        c.appendChild(el('div','cap use','How it is used'));
+        var p2=document.createElement('pre');p2.className='use';p2.textContent=q.code.use;c.appendChild(p2);
+      }
+      b.appendChild(c);
+    }
+    b.appendChild(el('div','qsec','<div class="label">Trade-offs to say out loud</div><p>'+q.trade+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">Follow-ups to expect</div><p>'+q.follow+'</p>'));
+    d.appendChild(b);wrap.appendChild(d);
+  });
+  return wrap;
+}
+
+var P={lld:['Design a parking lot','Design an elevator system','Design Splitwise (shared expenses)','Design a library system','Design a vending machine','Design an LRU cache','Design a chess game','Design an ATM','Design a movie ticket booking system','Design a logging framework'],
+ hld:['Design a URL shortener','Design a news feed','Design a chat application','Design a video streaming service','Design a ride-hailing app','Design a notification system','Design a web crawler','Design search autocomplete','Design a payment system','Design a ticket booking system']};
+var timerState={remaining:1200,running:false,endAt:0,id:null};
+function buildDrill(){
+  var box=el('div','check'),kind='lld',cur='';
+  box.appendChild(el('div','label','Today\'s drill'));
+  var pill=el('span','pill','LLD');var pw=el('div');pw.appendChild(pill);box.appendChild(pw);
+  var prompt=el('p',null,'');prompt.style.cssText='font:600 1.2rem/1.4 var(--font-display)';box.appendChild(prompt);
+  var r1=el('div','row');
+  var bl=el('button','reveal','New LLD prompt'),bh=el('button','reveal','New HLD prompt');bl.type=bh.type='button';
+  r1.appendChild(bl);r1.appendChild(bh);box.appendChild(r1);
+  var time=el('div','timer','20:00');box.appendChild(time);
+  var phase=el('p',null,'Ready when you are.');box.appendChild(phase);
+  var r2=el('div','row');
+  var st=el('button','btn','Start'),rs=el('button','btn ghost','Reset');st.type=rs.type='button';
+  r2.appendChild(st);r2.appendChild(rs);box.appendChild(r2);
+  function pick(k){kind=k;var l=P[k],p=cur;while(p===cur)p=l[Math.floor(Math.random()*l.length)];cur=p;prompt.textContent=p;pill.textContent=k.toUpperCase()}
+  function render(){
+    var rem=timerState.remaining,m=Math.floor(rem/60),s=rem%60;
+    time.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    var el_=1200-rem,txt;
+    if(rem<=0)txt='Time. Now write one line: what did I skip or hand-wave?';
+    else if(!timerState.running&&el_===0)txt='Ready when you are. Talk out loud.';
+    else if(el_<300)txt='Clarify: ask questions, pick three must-haves and one key quality.';
+    else if(el_<900)txt=kind==='lld'?'Model: nouns, verbs, who owns what, what will change.':'Model: numbers, the two actions, smallest design, what breaks first.';
+    else txt='Stress and trade: two users at once, a new requirement, then the template sentence.';
+    phase.textContent=txt;
+    st.textContent=timerState.running?'Pause':(rem<=0||rem===1200?'Start':'Resume');
+  }
+  function tick(){
+    timerState.remaining=Math.max(0,Math.ceil((timerState.endAt-Date.now())/1000));
+    if(timerState.remaining<=0){timerState.running=false;clearInterval(timerState.id);timerState.id=null}
+    render();
+  }
+  st.addEventListener('click',function(){
+    if(timerState.running){timerState.running=false;clearInterval(timerState.id);timerState.id=null;render();return}
+    if(timerState.remaining<=0)timerState.remaining=1200;
+    timerState.running=true;timerState.endAt=Date.now()+timerState.remaining*1000;
+    timerState.id=setInterval(tick,500);render();
+  });
+  rs.addEventListener('click',function(){timerState.running=false;clearInterval(timerState.id);timerState.id=null;timerState.remaining=1200;render()});
+  bl.addEventListener('click',function(){pick('lld');render()});
+  bh.addEventListener('click',function(){pick('hld');render()});
+  pick('lld');render();
+  return box;
+}
+
+/* ================= PAGE ================= */
+var cur=0;
+function idx(){
+  var h=(location.hash||'').replace('#','');
+  for(var i=0;i<L.length;i++)if(L[i].id===h)return i;
+  return 0;
+}
+function drawList(){
+  var host=$('#list');host.innerHTML='';
+  var last='';
+  L.forEach(function(l,i){
+    if(l.trackName!==last){last=l.trackName;host.appendChild(el('h3',null,l.trackName))}
+    var a=document.createElement('a');a.href='#'+l.id;
+    if(i===cur)a.setAttribute('aria-current','page');
+    a.innerHTML='<span class="n">'+(i+1)+'</span><span>'+l.title+'</span><span class="'+(done[l.id]?'tick':'min')+'">'+(done[l.id]?'&#10003; done':l.min+' min')+'</span>';
+    a.addEventListener('click',function(){closeList()});
+    host.appendChild(a);
+  });
+}
+function closeList(){$('#list').classList.remove('open');$('#menu-btn').setAttribute('aria-expanded','false')}
+$('#menu-btn').addEventListener('click',function(){
+  var o=$('#list').classList.toggle('open');this.setAttribute('aria-expanded',o?'true':'false');
+});
+function meter(){
+  var n=0;L.forEach(function(l){if(done[l.id])n++});
+  $('#meter').style.width=Math.round(n/L.length*100)+'%';
+}
+function draw(){
+  cur=idx();
+  var l=L[cur];
+  document.body.setAttribute('data-track',l.track);
+  $('#where').textContent='Lesson '+(cur+1)+' of '+L.length+' · '+l.trackName;
+  var host=$('#lesson');host.innerHTML='';
+  var head=el('div');
+  head.appendChild(el('div','kicker',l.trackName+' · about '+l.min+' minutes'));
+  head.appendChild(el('h1',null,l.title));
+  head.appendChild(el('p','promise',l.promise));
+  host.appendChild(head);
+  l.blocks.forEach(function(b){renderBlock(b,host)});
+  var dr=el('label','done-row');
+  var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!done[l.id];
+  cb.addEventListener('change',function(){if(cb.checked)done[l.id]=1;else delete done[l.id];save();meter();drawList()});
+  dr.appendChild(cb);dr.appendChild(el('span',null,'I finished this lesson'));
+  host.appendChild(dr);
+  var nav=el('div','nav');
+  var pv=el('button','btn ghost','Previous');pv.type='button';pv.disabled=cur===0;
+  var nx=el('button','btn',cur===L.length-1?'Back to lesson 1':'Next lesson');nx.type='button';
+  pv.addEventListener('click',function(){if(cur>0)location.hash=L[cur-1].id});
+  nx.addEventListener('click',function(){location.hash=L[cur===L.length-1?0:cur+1].id});
+  nav.appendChild(pv);nav.appendChild(nx);host.appendChild(nav);
+  meter();drawList();
+}
+window.addEventListener('hashchange',function(){draw();window.scrollTo(0,0)});
+draw();
+})();
+</script>

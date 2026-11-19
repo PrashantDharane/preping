@@ -1,0 +1,939 @@
+<title>Docker, Kubernetes and CI/CD Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#EDEBE4; --fg:#1D2530; --muted:#556170; --line:#DAD7CD;
+  --start:#4B3FA8; --lld:#0B6B6A; --hld:#244A8F; --practice:#9A4A12; --bank:#8A2D63; --pat:#3F6B1F;
+  --accent:var(--start);
+  --start-soft:#E7E4F7; --bank-soft:#F6E1EE; --pat-soft:#E3F0D3; --accent-soft:var(--start-soft); --lld-soft:#D9EFED; --hld-soft:#E0E8F8; --practice-soft:#F8E6D6;
+  --good:#17794A; --good-soft:#DCF2E6; --bad:#B3261E; --bad-soft:#FBE2DF; --warn-soft:#FBEBCD; --warn:#8A4B00;
+  --code-bg:#F0EEE7; --on-accent:#FFFFFF;
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+    --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+    --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+    --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+    --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+  --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+  --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+  --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+  --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+}
+body[data-track="start"]{--accent:var(--start);--accent-soft:var(--start-soft)}
+body[data-track="lld"]{--accent:var(--lld);--accent-soft:var(--lld-soft)}
+body[data-track="hld"]{--accent:var(--hld);--accent-soft:var(--hld-soft)}
+body[data-track="practice"]{--accent:var(--practice);--accent-soft:var(--practice-soft)}
+body[data-track="bank"]{--accent:var(--bank);--accent-soft:var(--bank-soft)}
+body[data-track="patterns"]{--accent:var(--pat);--accent-soft:var(--pat-soft)}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.75 var(--font-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;display:flex;align-items:center;gap:12px}
+.bar .where{flex:1;min-width:0;font:500 .85rem var(--font-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.92rem}
+body[data-track="devops"]{--accent:var(--start);--accent-soft:var(--start-soft)}
+.homelink{color:var(--accent);text-decoration:none;font-weight:600;font-size:.92rem;padding:8px 4px}
+.meter{height:4px;background:var(--surface-2)}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* lesson list */
+.list{display:none;padding:16px 0 8px}
+.list.open{display:block}
+.list h3{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.list a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--fg);font-size:.98rem}
+.list a:hover{background:var(--surface-2)}
+.list a[aria-current="page"]{background:var(--surface);border:1px solid var(--line)}
+.list .n{font:500 .8rem var(--font-mono);color:var(--muted)}
+.list .tick{font-size:.85rem;color:var(--good)}
+.list .min{font:400 .75rem var(--font-mono);color:var(--muted)}
+
+/* lesson */
+.lesson{padding-top:36px;display:flex;flex-direction:column;gap:28px}
+.kicker{font:600 .78rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lesson h1{font-size:clamp(1.9rem,5vw,2.5rem);font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.promise{color:var(--muted);font-size:1.08rem;margin-top:10px}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font:600 .75rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.sec h2{font-size:1.3rem;font-weight:600}
+.sec p+p{margin-top:2px}
+b,strong{font-weight:600}
+.box{border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.box.plain{background:var(--surface);border:1px solid var(--line)}
+.box.mistake{background:var(--bad-soft)}
+.box.mistake .label{color:var(--bad)}
+.box.remember{background:var(--warn-soft)}
+.box.remember .label{color:var(--warn)}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px}
+ol.steps li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);font:600 .85rem var(--font-mono);display:grid;place-items:center;margin-top:2px}
+ol.steps b{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;min-width:0}
+.two .h{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{font-size:1.05rem}
+.card .pic{color:var(--accent);font-weight:600;font-size:.95rem}
+.card .small{color:var(--muted);font-size:.93rem}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 .84rem/1.6 var(--font-mono);tab-size:2}
+.cap{font:500 .75rem var(--font-mono);color:var(--muted);margin-bottom:-4px}
+.cap.bad{color:var(--bad)} .cap.good{color:var(--good)}
+.cap.use{color:var(--accent);font-weight:600}
+pre.use{border-left:3px solid var(--accent)}
+.check{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.check .q{font-weight:600}
+.reveal{align-self:flex-start;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.ans{background:var(--good-soft);border-radius:10px;padding:12px 14px}
+.ans[hidden]{display:none}
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px 20px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.done-row{display:flex;align-items:center;gap:10px}
+.done-row input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* calculator + timer */
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.85rem;color:var(--muted)}
+.field input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:500 1rem var(--font-mono)}
+.out{display:flex;flex-direction:column}
+.out div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.out span{color:var(--muted);font-size:.95rem}
+.out b{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.timer{font:500 clamp(2.6rem,9vw,3.6rem)/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.stage{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 .85rem var(--font-mono)}
+.stage[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+code{font:500 .86em var(--font-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre code{padding:0;background:none}
+
+/* diagrams */
+.diagram{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.diagram svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.diagram .dcap{font-size:.88rem;color:var(--muted);text-align:center}
+.dg-box{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.2}
+.dg-if{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-st{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-note{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-dasharray:4 3}
+.dg-sep{stroke:var(--muted);stroke-width:1;opacity:.6}
+.dg-t{font:600 12.5px var(--font-display);fill:var(--fg);text-anchor:middle}
+.dg-s{font:italic 400 10px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-m{font:400 10.5px var(--font-mono);fill:var(--fg)}
+.dg-n{font:400 10.5px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-e{stroke:var(--muted);stroke-width:1.4;fill:none}
+.dg-e.dash{stroke-dasharray:5 4}
+.dg-lb{fill:var(--surface)}
+.dg-l{font:500 10.5px var(--font-body);fill:var(--fg);text-anchor:middle}
+.mk-tri{fill:var(--surface);stroke:var(--muted);stroke-width:1.2}
+.mk-open{fill:none;stroke:var(--muted);stroke-width:1.4}
+.mk-fill{fill:var(--muted);stroke:none}
+/* question bank */
+details.q{border:1px solid var(--line);background:var(--surface);border-radius:14px}
+details.q+details.q{margin-top:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 1.05rem/1.3 var(--font-display)}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"+";font:500 1.3rem var(--font-mono);color:var(--accent);flex:none}
+details.q[open]>summary::after{content:"\2212"}
+details.q[open]>summary{border-bottom:1px solid var(--line)}
+.qleft{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.qbody{padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.qbody .where{font-size:.9rem;color:var(--muted)}
+.qsec{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qlist{margin:0;padding-left:20px}
+.qlist li+li{margin-top:6px}
+.links{display:flex;flex-direction:column;gap:8px}
+.links a{color:var(--accent);word-break:break-word}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <a class="homelink" href="index.html">Home</a>
+    <span class="where" id="where">Lesson 1</span>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="list">All lessons</button>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <nav class="list" id="list" aria-label="Lessons"></nav>
+  <main class="lesson" id="lesson"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var KEY='devops-course-v1';
+var done={};
+try{done=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){done={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(done))}catch(e){}}
+
+/* ================= CONTENT ================= */
+/* block types: p, plain, analogy, steps, two, cards, code, mistake, check, remember, calc, drill, stages */
+var L=[
+/* ---------- 1 ---------- */
+{id:`lesson-1`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`From your laptop to production: the whole picture`,min:9,
+ promise:`You do not need to be a DevOps engineer. You need to explain how your code gets to users, and what to do when it breaks. Start with the whole road.`,
+ blocks:[
+ {t:`plain`,h:`Modern teams do not copy a jar onto a server by hand. Code is pushed, a <b>pipeline</b> builds and tests it, packs it into a <b>container image</b>, stores the image in a <b>registry</b>, and <b>Kubernetes</b> runs copies of it. Each piece answers one problem.`},
+ {t:`diagram`,cap:`Every arrow is a place something can fail, and a place an interviewer can ask about.`,d:{w:420,alt:`Pipeline from git push through build and test, image registry, Kubernetes to users`,nodes:[
+   {id:`g`,t:`Git push`,x:6,y:8,w:74,k:`state`},
+   {id:`b`,t:`CI build`,s:`compile, test`,x:100,y:4,w:100},
+   {id:`r`,t:`Registry`,s:`image stored`,x:224,y:4,w:100},
+   {id:`k`,t:`Kubernetes`,s:`runs pods`,x:100,y:92,w:100},
+   {id:`u`,t:`Users`,x:224,y:100,w:100,k:`state`}],
+  edges:[{a:`g`,b:`b`},{a:`b`,b:`r`},{a:`r`,b:`k`},{a:`k`,b:`u`}]}},
+ {t:`cards`,items:[
+   {h:`Docker`,pic:`Package`,b:`Puts your app and its runtime into one image that runs the same everywhere. Ends "it works on my machine".`},
+   {h:`Kubernetes`,pic:`Run`,b:`Starts, stops, scales and heals many containers across many machines.`},
+   {h:`CI/CD`,pic:`Automate`,b:`Builds, tests and deploys on every change, the same way each time.`},
+   {h:`Cloud`,pic:`Rent`,b:`Machines, databases and queues on demand: AWS, Azure, GCP.`},
+   {h:`Observability`,pic:`See`,b:`Logs, metrics and traces so you can tell what is wrong.`}]},
+ {t:`remember`,h:`Interview guides for Java developers treat Docker and Kubernetes as <b>practical knowledge</b>: write a Dockerfile, explain a pod and a service, set probes and resources, and debug a crashing pod. That is the target. Deep cluster administration is for DevOps roles.`},
+ {t:`p`,h:`<h2>The plan</h2>`},
+ {t:`cards`,items:[
+   {h:`Lesson 2`,b:`Docker: images, layers, a good Dockerfile for Spring Boot.`},
+   {h:`Lesson 3`,b:`Kubernetes objects and how a request reaches your pod.`},
+   {h:`Lesson 4`,b:`Probes, resources, rollouts, scaling and fixing a broken pod.`},
+   {h:`Lesson 5`,b:`CI/CD pipelines and deployment strategies.`},
+   {h:`Lesson 6`,b:`Cloud and observability basics.`},
+   {h:`Lesson 7`,b:`Twelve questions with full answers.`}]},
+ {t:`check`,q:`In one sentence each: what problem does Docker solve, and what problem does Kubernetes solve?`,a:`Docker solves "it runs differently on every machine" by packaging the app with its dependencies into an image. Kubernetes solves "how do I run, scale, update and heal many containers across many machines" by declaring the desired state and continuously making reality match it.`}
+]},
+
+/* ---------- 2 ---------- */
+{id:`lesson-2`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`Docker: images, layers and a good Dockerfile`,min:15,
+ promise:`What an image really is, why build order matters, and the Dockerfile for a Spring Boot service that you can explain line by line.`,
+ blocks:[
+ {t:`plain`,h:`An <b>image</b> is a read-only package: your app, a runtime, and the files they need. A <b>container</b> is a running instance of an image, isolated from others. Containers share the host's operating-system kernel, so they start in seconds, unlike virtual machines, which each carry a full OS.`},
+ {t:`analogy`,h:`An image is a recipe card with all ingredients pre-measured in a box. A container is a dish cooked from that box. You can cook ten dishes from one box, and each one is separate.`},
+ {t:`two`,a:{h:`Virtual machine`,b:`Runs a whole guest operating system on virtual hardware. Heavy, slower to start, strong isolation.`},b:{h:`Container`,b:`Shares the host kernel and isolates processes with namespaces and cgroups. Light, fast, less isolated than a VM.`}},
+ {t:`p`,h:`<h2>Layers and the build cache</h2>`},
+ {t:`plain`,h:`Each Dockerfile instruction creates a <b>layer</b>. Docker caches layers. If a step and everything above it is unchanged, the cached layer is reused. So put things that <b>change rarely</b> (dependencies) <b>before</b> things that change often (your code).`},
+ {t:`code`,bad:true,cap:`Bad: any code change re-downloads every dependency`,code:`FROM maven:3.9-eclipse-temurin-21
+COPY . /app                 # code AND pom copied together
+WORKDIR /app
+RUN mvn package             # cache is busted by every code edit
+CMD ["java", "-jar", "target/app.jar"]`},
+ {t:`code`,use:true,cap:`How it is used: a multi-stage Dockerfile for a Spring Boot service`,code:`# ---- Stage 1: build (big image with Maven and the JDK) ----
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -q dependency:go-offline          # cached until pom.xml changes
+COPY src ./src
+RUN mvn -q package -DskipTests
+
+# ---- Stage 2: run (small image with only a JRE) ----
+FROM eclipse-temurin:21-jre
+RUN useradd --system --create-home appuser
+USER appuser                               # do not run as root
+WORKDIR /home/appuser
+COPY --from=build /app/target/app.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+
+# docker build -t myorg/orders:1.4.0 .
+# docker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod myorg/orders:1.4.0`},
+ {t:`cards`,items:[
+   {h:`Why multi-stage`,b:`The final image holds only the JRE and the jar, not Maven and source code. Smaller, faster to pull, fewer things to attack.`},
+   {h:`CMD vs ENTRYPOINT`,b:`<code>ENTRYPOINT</code> is the fixed program. <code>CMD</code> gives default arguments that a user can replace at <code>docker run</code>. Use the exec (JSON) form so the Java process receives stop signals directly.`},
+   {h:`COPY vs ADD`,b:`Prefer <code>COPY</code>. <code>ADD</code> also fetches URLs and unpacks archives, which surprises people.`},
+   {h:`EXPOSE`,b:`Documentation only. It does not open a port. The <code>-p</code> flag publishes it.`},
+   {h:`.dockerignore`,b:`Keep <code>target/</code>, <code>.git</code> and secrets out of the build context.`}]},
+ {t:`p`,h:`<h2>Data, networks and local development</h2>`},
+ {t:`cards`,items:[
+   {h:`Container storage is temporary`,b:`Data written inside a container disappears with it. Use a <b>volume</b> for data that must survive, such as a database folder.`},
+   {h:`Volume vs bind mount`,b:`A volume is managed by Docker. A bind mount maps a host folder, handy for development.`},
+   {h:`Docker Compose`,b:`One file that starts your app plus Postgres, Kafka and Redis for local work. Services reach each other by name.`}]},
+ {t:`code`,use:true,cap:`How it is used: the app and its database on a laptop`,code:`# docker-compose.yml
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: dev
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+  app:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres   # "db" is the service name
+    depends_on: [db]
+volumes:
+  dbdata:
+# docker compose up --build`},
+ {t:`mistake`,h:`Using the <code>latest</code> tag in production. You cannot tell what is running, and a rebuild can change it. Tag with a version or the git commit, and deploy that exact tag. Also: baking secrets into an image. Anyone who can pull the image can read them. Inject them at run time.`},
+ {t:`check`,q:`Your image build takes 6 minutes on every small code change, mostly downloading dependencies. What do you change?`,a:`Reorder the Dockerfile so the dependency step is a separate layer before copying source. Copy only <code>pom.xml</code>, run the dependency download, then copy <code>src</code>. Dependencies are then cached until the pom changes. A BuildKit cache mount for the Maven repository helps further.`}
+]},
+
+/* ---------- 3 ---------- */
+{id:`lesson-3`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`Kubernetes: the objects and how a request reaches your pod`,min:17,
+ promise:`Six words cover most of Kubernetes: Pod, Deployment, Service, Ingress, ConfigMap, Secret. Learn what each does and how they connect.`,
+ blocks:[
+ {t:`plain`,h:`You tell Kubernetes the <b>desired state</b>: "run 3 copies of this image". Kubernetes compares that with what exists and keeps fixing the difference. If a pod dies, it starts another. You declare, it reconciles.`},
+ {t:`analogy`,h:`A restaurant manager with a rule: "always 3 chefs on the line". A chef leaves, the manager calls a replacement. You never tell the manager which chef to call. You only state the number.`},
+ {t:`cards`,items:[
+   {h:`Pod`,b:`The smallest unit. One or more containers sharing a network address and storage. Pods are temporary and get new IP addresses when recreated.`},
+   {h:`Deployment`,b:`Keeps N identical pods running, and handles rolling updates and rollbacks. It manages ReplicaSets, which manage pods.`},
+   {h:`Service`,b:`A stable name and IP in front of a changing set of pods. It load-balances across the healthy ones.`},
+   {h:`Ingress`,b:`HTTP routing from outside the cluster to Services, by host and path, with TLS.`},
+   {h:`ConfigMap and Secret`,b:`Settings and sensitive values, supplied to pods as environment variables or files. Secrets are only base64 encoded by default, not encrypted, so protect them with access rules.`},
+   {h:`Namespace`,b:`A named partition of the cluster, such as <code>dev</code> and <code>prod</code>, or one per team.`}]},
+ {t:`diagram`,cap:`The Service is the stable front. The pods behind it come and go.`,d:{w:420,alt:`Client to Ingress to Service to three pods managed by a Deployment`,nodes:[
+   {id:`c`,t:`User`,x:6,y:52,w:56,k:`state`},
+   {id:`i`,t:`Ingress`,s:`host, path, TLS`,x:84,y:38,w:100},
+   {id:`s`,t:`Service`,s:`stable name`,x:206,y:38,w:90},
+   {id:`d`,t:`Deployment`,s:`3 replicas`,x:318,y:8,w:96,m:[`pod A`,`pod B`,`pod C`]}],
+  edges:[{a:`c`,b:`i`},{a:`i`,b:`s`},{a:`s`,b:`d`}]}},
+ {t:`code`,use:true,cap:`How it is used: a Deployment and Service for the orders app`,code:`apiVersion: apps/v1
+kind: Deployment
+metadata: { name: orders }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: orders }
+  template:
+    metadata:
+      labels: { app: orders }          # the Service finds pods by this label
+    spec:
+      containers:
+        - name: orders
+          image: myorg/orders:1.4.0
+          ports: [{ containerPort: 8080 }]
+          envFrom:
+            - configMapRef: { name: orders-config }
+            - secretRef:    { name: orders-secrets }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: orders }
+spec:
+  selector: { app: orders }            # send traffic to pods with this label
+  ports: [{ port: 80, targetPort: 8080 }]
+# Other services now call http://orders. Kubernetes DNS and the Service handle the rest.`},
+ {t:`p`,h:`<h2>Service types</h2>`},
+ {t:`cards`,items:[
+   {h:`ClusterIP (default)`,b:`Reachable only inside the cluster. For service to service calls.`},
+   {h:`NodePort`,b:`Opens a port on every node. Mostly for testing.`},
+   {h:`LoadBalancer`,b:`Asks the cloud for an external load balancer.`},
+   {h:`Ingress`,b:`Not a Service type. One entry point that routes many hosts and paths to many Services.`}]},
+ {t:`p`,h:`<h2>Commands you should know cold</h2>`},
+ {t:`code`,cap:`kubectl, grouped by purpose`,code:`kubectl get pods -n prod                        # what is running
+kubectl describe pod orders-7d9f-xk2p           # events: why it is Pending or crashing
+kubectl logs orders-7d9f-xk2p --previous        # logs of the container that just crashed
+kubectl exec -it orders-7d9f-xk2p -- sh         # shell inside the pod
+kubectl apply -f orders.yaml                    # make the cluster match the file
+kubectl rollout status deployment/orders        # watch an update
+kubectl rollout undo deployment/orders          # go back to the previous version
+kubectl scale deployment/orders --replicas=5    # change the count
+kubectl port-forward svc/orders 8080:80         # reach a service from your laptop`},
+ {t:`mistake`,h:`Calling a pod by its IP address, or treating pods as pets. Pods are replaced and their IPs change. Always talk to a Service name. Also: storing data on a pod's local disk and expecting it to stay. Use a persistent volume or an external database.`},
+ {t:`check`,q:`You change a pod's label and it stops receiving traffic from its Service, though it is still running. Why?`,a:`A Service selects pods by label. When the pod no longer matches the selector, it is removed from the Service's endpoints, so traffic stops, while the pod itself keeps running. The Deployment may even start a replacement, because the old pod no longer matches the Deployment's selector either.`}
+]},
+
+/* ---------- 4 ---------- */
+{id:`lesson-4`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`Probes, resources, rollouts, scaling and fixing a broken pod`,min:18,
+ promise:`The settings that make a Java service survive in Kubernetes, and a clear method for the question "the pod keeps crashing".`,
+ blocks:[
+ {t:`p`,h:`<h2>Health probes: three different questions</h2>`},
+ {t:`cards`,items:[
+   {h:`Liveness`,pic:`Is it stuck?`,b:`If it fails, Kubernetes <b>restarts</b> the container. Use for deadlocks and hangs. Keep it cheap and independent of other services.`},
+   {h:`Readiness`,pic:`Can it take traffic now?`,b:`If it fails, the pod is <b>removed from the Service</b> but not restarted. Use for "still starting" or "database unreachable".`},
+   {h:`Startup`,pic:`Has it finished starting?`,b:`Gives a slow-starting Java app time before liveness begins, so it is not killed in the middle of start-up.`}]},
+ {t:`code`,use:true,cap:`How it is used: probes wired to Spring Boot Actuator`,code:`# application.yml
+management.endpoint.health.probes.enabled: true      # adds /actuator/health/liveness and /readiness
+server.shutdown: graceful
+
+# Deployment container spec
+livenessProbe:
+  httpGet: { path: /actuator/health/liveness, port: 8080 }
+  periodSeconds: 10
+  failureThreshold: 3
+readinessProbe:
+  httpGet: { path: /actuator/health/readiness, port: 8080 }
+  periodSeconds: 5
+startupProbe:
+  httpGet: { path: /actuator/health/liveness, port: 8080 }
+  failureThreshold: 30          # up to 30 x 10 s = 5 minutes to start
+  periodSeconds: 10`},
+ {t:`mistake`,h:`Putting a database check in the <b>liveness</b> probe. When the database blips, every pod fails liveness, all restart together, and a small outage becomes a big one. Dependencies belong in readiness, if anywhere.`},
+ {t:`p`,h:`<h2>Resources: requests and limits</h2>`},
+ {t:`two`,a:{h:`Request`,b:`What the pod is <b>guaranteed</b>. The scheduler uses it to choose a node. Think of it as a reservation.`},b:{h:`Limit`,b:`The ceiling. Go over the CPU limit and you are <b>throttled</b>. Go over the memory limit and you are <b>killed</b> (OOMKilled, exit code 137).`}},
+ {t:`code`,cap:`Resources and the JVM must agree`,code:`resources:
+  requests: { cpu: "500m", memory: "1Gi" }      # 500 millicores = half a CPU
+  limits:   { cpu: "1",    memory: "1Gi" }
+# JVM flag: -XX:MaxRAMPercentage=70   -> heap about 700 MB, leaving room for metaspace and threads.
+# A heap sized to the full 1Gi limit would be OOMKilled by the container runtime.`},
+ {t:`p`,h:`<h2>Rolling updates and rollback</h2>`},
+ {t:`plain`,h:`A Deployment replaces pods gradually. <code>maxSurge</code> says how many extra pods may exist during the change, and <code>maxUnavailable</code> how many may be missing. New pods must pass <b>readiness</b> before old ones are removed, so users see no gap.`},
+ {t:`code`,cap:`Zero-downtime settings`,code:`strategy:
+  type: RollingUpdate
+  rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }    # never drop below the desired count
+# Graceful stop: the pod gets SIGTERM, Spring finishes in-flight requests.
+terminationGracePeriodSeconds: 40
+lifecycle:
+  preStop: { exec: { command: ["sleep", "5"] } }        # lets the load balancer stop sending first`},
+ {t:`p`,h:`<h2>Scaling</h2>`},
+ {t:`cards`,items:[
+   {h:`Horizontal Pod Autoscaler`,b:`Adds or removes pods based on CPU, memory or custom metrics. Needs resource requests set. Your service must be stateless.`},
+   {h:`Cluster autoscaler`,b:`Adds machines when pods cannot be scheduled.`},
+   {h:`Vertical scaling`,b:`Giving one pod more CPU or memory. Often needs a restart.`}]},
+ {t:`code`,use:true,cap:`How it is used: scale between 3 and 10 pods at 70 percent CPU`,code:`apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: orders }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: orders }
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }`},
+ {t:`p`,h:`<h2>"The pod is broken": a method</h2>`},
+ {t:`steps`,items:[
+   [`Look at the status.`,` <code>kubectl get pods</code> tells you the state.`],
+   [`Pending.`,` Not scheduled. <code>describe pod</code> shows why: not enough CPU or memory on any node, or a volume or node-selector problem.`],
+   [`ImagePullBackOff.`,` The image name or tag is wrong, or registry credentials are missing.`],
+   [`CrashLoopBackOff.`,` The container starts and exits again and again. Read <code>kubectl logs --previous</code>. Typical causes: a missing environment variable, cannot reach the database, a bug at start-up.`],
+   [`OOMKilled (exit 137).`,` Memory limit exceeded. Compare heap and limit, look for a leak.`],
+   [`Running but not Ready.`,` Readiness is failing. Check the probe path and the dependency it checks.`]]},
+ {t:`check`,q:`A Spring Boot pod restarts every few minutes, with no error in its logs. <code>describe pod</code> shows "Last State: Terminated, Reason: OOMKilled". What is wrong and how do you fix it?`,a:`The container went over its memory limit, so the container runtime killed it, which is why the app logged nothing. The JVM heap plus metaspace, threads and direct memory exceeded the limit. Set <code>-XX:MaxRAMPercentage</code> to around 70, check thread count and direct buffers, take a heap dump if memory climbs over time, and raise the limit only if the usage is legitimate.`}
+]},
+
+/* ---------- 5 ---------- */
+{id:`lesson-5`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`CI/CD: pipelines and safe deployment strategies`,min:16,
+ promise:`What a pipeline contains, how to roll out without taking users down, and how to roll back in a minute.`,
+ blocks:[
+ {t:`plain`,h:`<b>Continuous Integration</b> means every change is built and tested automatically, many times a day, so broken code is caught in minutes. <b>Continuous Delivery</b> means every passing build can be released at any time. <b>Continuous Deployment</b> goes one step further and releases automatically.`},
+ {t:`diagram`,cap:`A typical pipeline. A failure at any stage stops the line.`,d:{w:420,alt:`Pipeline stages from checkout to production`,nodes:[
+   {id:`a`,t:`Checkout`,x:6,y:8,w:70},
+   {id:`b`,t:`Build + test`,x:92,y:8,w:92},
+   {id:`c`,t:`Scan`,s:`code, deps`,x:200,y:4,w:78},
+   {id:`d`,t:`Image`,s:`push`,x:294,y:4,w:64},
+   {id:`e`,t:`Staging`,s:`deploy, smoke`,x:92,y:96,w:100},
+   {id:`f`,t:`Production`,s:`approval, rollout`,x:214,y:96,w:130}],
+  edges:[{a:`a`,b:`b`},{a:`b`,b:`c`},{a:`c`,b:`d`},{a:`d`,b:`e`},{a:`e`,b:`f`}]}},
+ {t:`code`,use:true,cap:`How it is used: a GitHub Actions pipeline (the same shape works in Jenkins or GitLab CI)`,code:`name: ci
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: maven }
+      - run: mvn -B verify                         # compile, unit and integration tests
+      - run: docker build -t myorg/orders:$GITHUB_SHA .
+      - if: github.ref == 'refs/heads/main'
+        run: |
+          echo "$REGISTRY_TOKEN" | docker login -u ci --password-stdin
+          docker push myorg/orders:$GITHUB_SHA
+        env: { REGISTRY_TOKEN: \${{ secrets.REGISTRY_TOKEN }} }
+# Image is tagged with the commit id, so you always know exactly what is running.`},
+ {t:`cards`,items:[
+   {h:`Stages worth naming`,b:`Build, unit tests, static analysis (SonarQube), dependency and image scanning, integration tests, publish image, deploy to staging, smoke tests, deploy to production.`},
+   {h:`Fail fast`,b:`Run the quick checks first. A developer should know within a few minutes if they broke something.`},
+   {h:`Build once, promote`,b:`Build the image <b>once</b> and deploy the same image to every environment. Only configuration changes.`}]},
+ {t:`p`,h:`<h2>Deployment strategies</h2>`},
+ {t:`cards`,items:[
+   {h:`Rolling`,pic:`Replace gradually`,b:`Pods are swapped a few at a time. No extra cost, and the default in Kubernetes. Old and new versions run side by side briefly, so they must be compatible.`},
+   {h:`Blue-green`,pic:`Two full copies`,b:`Run the new version beside the old, test it, then switch all traffic at once. Instant rollback by switching back. Costs double capacity.`},
+   {h:`Canary`,pic:`Small slice first`,b:`Send 1 to 5 percent of traffic to the new version, watch error rate and latency, then increase. Smallest blast radius, needs good metrics.`},
+   {h:`Recreate`,pic:`Stop then start`,b:`Downtime. Only for things that cannot run two versions.`}]},
+ {t:`remember`,h:`<b>Database changes are the hard part.</b> During a rolling or canary release the old and new code both run against one database. Use the <b>expand and contract</b> pattern: first add the new column (compatible with old code), deploy new code, and only later remove the old column. Run migrations with Flyway or Liquibase as part of the pipeline.`},
+ {t:`p`,h:`<h2>GitOps and infrastructure as code</h2>`},
+ {t:`cards`,items:[
+   {h:`GitOps`,b:`The cluster's desired state lives in Git. A tool such as Argo CD or Flux watches the repo and applies changes. Deploying is a pull request. Rollback is a revert.`},
+   {h:`Infrastructure as code`,b:`Terraform or CloudFormation describe networks, databases and clusters in files. Reviewed, versioned and repeatable.`},
+   {h:`Secrets`,b:`Never in Git in plain text. Use a secret manager, sealed or encrypted secrets, and short-lived credentials.`}]},
+ {t:`mistake`,h:`A pipeline that deploys to production with no test of the deployed result. Add a smoke test after each deploy, automatic rollback on a failing readiness check or error spike, and keep a tested way back. A fast deployment without a fast rollback is a risk, not a feature.`},
+ {t:`check`,q:`A new version has a bug that shows up only under real traffic. Which strategy limits the damage most, and what do you need in place for it to work?`,a:`A canary release. Only a small percentage of users see the new version at first, so the bug affects few people. You need good metrics (error rate, latency, business metrics), a way to route a percentage of traffic, alerts that compare canary to baseline, and an automated or one-command rollback.`}
+]},
+
+/* ---------- 6 ---------- */
+{id:`lesson-6`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`Cloud and observability basics for backend developers`,min:14,
+ promise:`Enough cloud vocabulary to follow a design discussion, and the three kinds of signal that tell you what your system is doing.`,
+ blocks:[
+ {t:`plain`,h:`You do not need to be a cloud architect, but you must know the common building blocks and what each replaces. The examples use AWS names, which are the most common ones to hear. Azure and Google Cloud have close equivalents.`},
+ {t:`cards`,items:[
+   {h:`Region and zone`,b:`A region is a geographic area (Mumbai, Hyderabad). It has several availability zones, which are separate data centres. Spread your app across zones so one failure does not take you down.`},
+   {h:`Compute`,b:`EC2 (virtual machines), EKS (managed Kubernetes), ECS (AWS containers), Lambda (functions).`},
+   {h:`Storage`,b:`S3 for files and objects. EBS for disks attached to machines.`},
+   {h:`Databases`,b:`RDS or Aurora for SQL, DynamoDB for key-value, ElastiCache for Redis.`},
+   {h:`Messaging`,b:`SQS for queues, SNS for fan-out, MSK for managed Kafka.`},
+   {h:`Network`,b:`A VPC is your private network. Load balancers (ALB) spread traffic. Put databases in private subnets with no public access.`},
+   {h:`Identity`,b:`IAM controls who and what may do what. Give each service the least permission it needs.`}]},
+ {t:`remember`,h:`A simple, good answer for a typical web service: load balancer, several app pods across zones in a Kubernetes cluster, a managed SQL database with a replica in another zone, Redis for cache, S3 for files, a queue for background work, and logs and metrics shipped to a monitoring tool.`},
+ {t:`p`,h:`<h2>Twelve-factor ideas that interviewers still use</h2>`},
+ {t:`cards`,items:[
+   {h:`Config in the environment`,b:`Same build everywhere. Settings and secrets come from outside.`},
+   {h:`Stateless processes`,b:`Keep state in a database or cache, so any instance can serve any request and instances can be killed freely.`},
+   {h:`Logs as a stream`,b:`Write to standard output. The platform collects them.`},
+   {h:`Disposable`,b:`Fast start and graceful stop, so scaling and rollouts are safe.`}]},
+ {t:`p`,h:`<h2>Observability: three signals</h2>`},
+ {t:`cards`,items:[
+   {h:`Logs`,pic:`What happened`,b:`Events with detail. Use structured (JSON) logs with a correlation id so one request can be followed across services. Tools: ELK or OpenSearch, Loki.`},
+   {h:`Metrics`,pic:`How much, how fast`,b:`Numbers over time: request rate, errors, latency percentiles, CPU, heap. Tools: Prometheus and Grafana. Spring Boot exposes them through Micrometer.`},
+   {h:`Traces`,pic:`Where the time went`,b:`One request followed across services as a tree of timed spans. Tools: OpenTelemetry with Jaeger or Tempo.`}]},
+ {t:`code`,use:true,cap:`How it is used: a correlation id in every log line`,code:`@Component
+class CorrelationFilter extends OncePerRequestFilter {
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+            throws ServletException, IOException {
+        String id = Optional.ofNullable(req.getHeader("X-Correlation-Id")).orElse(UUID.randomUUID().toString());
+        MDC.put("correlationId", id);                  // logback pattern prints %X{correlationId}
+        res.setHeader("X-Correlation-Id", id);
+        try { chain.doFilter(req, res); } finally { MDC.clear(); }   // clear: pool threads are reused
+    }
+}
+// Forward the same header on outgoing calls, and one search for that id shows the whole journey.`},
+ {t:`cards`,items:[
+   {h:`The four golden signals`,b:`Latency, traffic, errors and saturation. If you only watch four things, watch these for every service.`},
+   {h:`SLI, SLO, SLA`,b:`An indicator is a measurement (99.2 percent of requests succeed). An objective is the target (99.9 percent). An agreement is the promise to customers, with consequences.`},
+   {h:`Alert on symptoms`,b:`Alert when users are affected (error rate, latency), not on every CPU spike. Fewer, better alerts.`}]},
+ {t:`mistake`,h:`Averages hide pain. A 200 ms average can hide a 5 second 99th percentile for one user in a hundred. Report <b>p95 and p99</b> latency. Also: logging personal data or secrets. Mask them before they reach a log system.`},
+ {t:`check`,q:`Users report that checkout is occasionally slow, but the dashboards show healthy averages. What do you look at?`,a:`Latency percentiles (p95, p99) rather than the average, then a distributed trace for a slow request to see which service or call takes the time. Use the correlation id from a user's report to find their logs. Often the cause is one slow dependency, a lock, or a cold cache that the average hides.`}
+]},
+
+/* ---------- 7 ---------- */
+{id:`lesson-7`,track:`devops`,trackName:`Docker, Kubernetes, CI/CD`,title:`Docker, Kubernetes and CI/CD questions with full answers`,min:45,
+ promise:`Twelve questions as they are asked. Say your answer first, then open the walk-through.`,
+ blocks:[
+ {t:`qbank`,items:[
+ {n:`Docker image vs container, and how layers work`,tag:`Docker`,where:`The standard opening question on containers`,
+  ask:`What is the difference between an image and a container? Why do layers matter?`,
+  quality:`Clear definitions and the cache effect on build time.`,
+  steps:[[`Image.`,` A read-only template: app, runtime and files.`],[`Container.`,` A running, isolated instance of an image with a thin writable layer on top.`],[`Layers.`,` Each Dockerfile instruction adds a layer. Layers are cached and shared between images.`],[`Build order.`,` Put rarely changing steps (dependencies) before often-changing ones (code).`],[`Data.`,` The writable layer vanishes with the container. Use volumes for persistent data.`]],
+  trade:`More layers can mean a larger image. Combine related <code>RUN</code> steps and use multi-stage builds.`,
+  follow:`Container versus VM? What are namespaces and cgroups? What is the difference between CMD and ENTRYPOINT?`},
+ {n:`Write a production Dockerfile for a Spring Boot app`,tag:`Docker`,where:`Often a live whiteboard question`,
+  ask:`Show me a Dockerfile for a Spring Boot service and explain your choices.`,
+  quality:`Multi-stage, cache-friendly, non-root, small, flags for containers.`,
+  steps:[[`Multi-stage.`,` Build with Maven and JDK, run with a JRE only.`],[`Cache.`,` Copy <code>pom.xml</code> and fetch dependencies before copying source.`],[`Security.`,` Non-root user, a trusted and pinned base image, no secrets in the image.`],[`JVM.`,` <code>-XX:MaxRAMPercentage</code> so the heap follows the container limit.`],[`Tag.`,` Version or commit id, never <code>latest</code>.`]],
+  trade:`Distroless or Alpine images are smaller but harder to debug. A JRE on a standard Linux base is a safe default.`,
+  follow:`What are layered jars? What are Buildpacks and Jib? How do you scan images?`},
+ {n:`Explain Pod, Deployment, Service and Ingress`,tag:`Kubernetes`,where:`Appears in almost every Kubernetes screen`,
+  ask:`Explain these objects and how a request from the internet reaches my app.`,
+  quality:`Each object's job, and the path in order.`,
+  steps:[[`Pod.`,` One or more containers with a shared network. Temporary.`],[`Deployment.`,` Keeps N pods, does rolling updates and rollbacks via ReplicaSets.`],[`Service.`,` Stable address and load balancing across matching pods, found by labels.`],[`Ingress.`,` HTTP routing by host and path with TLS, handled by an ingress controller.`],[`Path.`,` User, load balancer, ingress, service, one of the pods.`]],
+  trade:`More objects means more YAML. Helm or Kustomize templates reduce repetition.`,
+  follow:`ClusterIP versus NodePort versus LoadBalancer? What is a ReplicaSet? How does service discovery work? (DNS)`},
+ {n:`Liveness vs readiness vs startup probes`,tag:`Kubernetes`,where:`A practical favourite for Java services`,
+  ask:`What is the difference between the three probes? What mistakes cause outages?`,
+  quality:`The different consequences, and the database-in-liveness trap.`,
+  steps:[[`Liveness.`,` Failing restarts the container. For hangs and deadlocks.`],[`Readiness.`,` Failing removes the pod from the Service. For "not ready to serve".`],[`Startup.`,` Delays the other probes for slow starters like Spring.`],[`Spring.`,` Actuator health groups for liveness and readiness.`],[`Mistake.`,` A shared dependency in liveness restarts every pod at once when that dependency has a blip.`]],
+  trade:`Strict probes detect problems early but can restart healthy pods on a hiccup. Tune thresholds.`,
+  follow:`What happens when readiness fails on all pods? How do you make readiness reflect shutdown? (it flips to out of service on SIGTERM)`},
+ {n:`Requests, limits and OOMKilled`,tag:`Kubernetes`,where:`Asked to test real JVM-on-Kubernetes experience`,
+  ask:`What is the difference between resource requests and limits? Why does my Java pod get OOMKilled with a small heap?`,
+  quality:`Scheduling versus enforcement, then the JVM total footprint.`,
+  steps:[[`Request.`,` Reserved amount. The scheduler uses it to place the pod.`],[`Limit.`,` The maximum. CPU over the limit is throttled. Memory over the limit kills the container.`],[`JVM footprint.`,` Heap plus metaspace, thread stacks, direct buffers, code cache and the JVM itself.`],[`Fix.`,` <code>-XX:MaxRAMPercentage</code> near 70 to 75, count threads, check native memory.`],[`CPU effect.`,` A low CPU limit throttles GC and JIT threads and hurts latency.`]],
+  trade:`Requests equal to limits give predictable behaviour but waste capacity. Bursting saves cost but risks eviction.`,
+  follow:`What are QoS classes? What happens to a pod that exceeds its CPU limit? What is the difference between OOMKilled and a Java OutOfMemoryError?`},
+ {n:`A pod is in CrashLoopBackOff: what do you do?`,tag:`Debugging`,where:`The most common practical Kubernetes scenario`,
+  ask:`A new deployment shows CrashLoopBackOff. Walk me through it.`,
+  quality:`A calm sequence of commands and likely causes.`,
+  steps:[[`Status.`,` <code>kubectl get pods</code>, and note restarts.`],[`Events.`,` <code>kubectl describe pod</code>: probe failures, OOMKilled, image or volume problems.`],[`Logs.`,` <code>kubectl logs --previous</code> for the crashed container.`],[`Common causes.`,` Missing environment variable or Secret, unreachable database, wrong config, a failing liveness probe, out of memory.`],[`Reproduce.`,` Run the image locally with the same environment, or use <code>kubectl debug</code>.`],[`Recover.`,` <code>kubectl rollout undo</code> if production is affected, then fix.`]],
+  trade:`Rolling back first restores service. Investigating afterwards avoids long outages.`,
+  follow:`What is the difference between ImagePullBackOff and CrashLoopBackOff? What does exit code 137 mean? (killed, often OOM)`},
+ {n:`Rolling update, blue-green and canary`,tag:`Deployment`,where:`Common for any role that owns releases`,
+  ask:`Compare the strategies and say when you would pick each.`,
+  quality:`Pick by risk, cost and rollback speed.`,
+  steps:[[`Rolling.`,` Replace gradually. Default, cheap. Both versions overlap.`],[`Blue-green.`,` Two full environments, switch traffic. Fast rollback, double cost.`],[`Canary.`,` A small percentage first, observe, then increase. Lowest risk, needs metrics and routing.`],[`Pick.`,` Rolling for routine low-risk changes. Canary for risky or high-traffic changes. Blue-green when you need an instant switch.`],[`Database.`,` Use expand and contract so old and new code both work.`]],
+  trade:`Safer strategies cost more in capacity or tooling.`,
+  follow:`How do you roll back a database migration? How does Kubernetes do canary? (Argo Rollouts, a service mesh, or two Deployments)`},
+ {n:`Design a CI/CD pipeline`,tag:`CI/CD`,where:`Asked in senior and lead rounds`,
+  ask:`Design a pipeline for a microservice from commit to production.`,
+  quality:`Stages with a purpose, build-once, promotion and rollback.`,
+  steps:[[`Trigger.`,` Pull request runs build and tests. Merge to main runs the full pipeline.`],[`Quality gates.`,` Unit tests, static analysis, dependency and image scanning.`],[`Build once.`,` One image, tagged with the commit id, pushed to a registry.`],[`Environments.`,` Deploy to staging, run smoke and integration tests, then promote the same image to production with an approval or automatic rule.`],[`Safe release.`,` Canary or rolling with health checks and automatic rollback.`],[`Config and secrets.`,` Outside the image, from a vault or Kubernetes secrets.`]],
+  trade:`More gates make releases safer but slower. Keep the fast path under about ten minutes.`,
+  follow:`Jenkins versus GitHub Actions versus GitLab CI? How do you handle database migrations? How do you version services?`},
+ {n:`GitOps and infrastructure as code`,tag:`CI/CD`,where:`Increasingly asked for platform-aware backend roles`,
+  ask:`What is GitOps? Why use Terraform?`,
+  quality:`Git as the source of truth, and the benefits.`,
+  steps:[[`GitOps.`,` Desired state of the cluster is stored in Git. An agent (Argo CD, Flux) syncs the cluster to match.`],[`Benefits.`,` Audit trail, review through pull requests, easy rollback by revert, drift correction.`],[`IaC.`,` Terraform describes cloud resources in files, so environments are reproducible.`],[`State.`,` Terraform keeps state, stored remotely and locked.`],[`Secrets.`,` Not in Git in plain text.`]],
+  trade:`More process for changes in exchange for control and traceability.`,
+  follow:`What is configuration drift? Push versus pull deployment? How do you manage secrets in GitOps?`},
+ {n:`Zero-downtime deployment of a Spring Boot service`,tag:`Deployment`,where:`Practical scenario question`,
+  ask:`How do you deploy a new version with no dropped requests?`,
+  quality:`Readiness, graceful shutdown, and compatible versions.`,
+  steps:[[`Rolling update.`,` <code>maxUnavailable: 0</code> and <code>maxSurge: 1</code>.`],[`Readiness.`,` New pods must be ready before old ones stop.`],[`Graceful shutdown.`,` <code>server.shutdown=graceful</code>, a termination grace period, and a short <code>preStop</code> sleep so the load balancer drains.`],[`Compatibility.`,` Old and new versions run together, so APIs and database changes must be backward compatible.`],[`Connections.`,` Handle in-flight requests and Kafka consumers cleanly on stop.`]],
+  trade:`A little longer deploy time in return for no errors.`,
+  follow:`What is a PodDisruptionBudget? How do you handle long-lived connections like websockets?`},
+ {n:`Logs, metrics and traces: how do you debug a slow request across services?`,tag:`Observability`,where:`Common in microservices rounds`,
+  ask:`One API call crosses five services and is sometimes slow. How do you find out why?`,
+  quality:`Use all three signals in order.`,
+  steps:[[`Metrics.`,` Check p95 and p99 latency per service to see which one moved.`],[`Traces.`,` Open a slow trace to see which span consumes the time.`],[`Logs.`,` Search by correlation id for the detail in that service.`],[`Hypothesis.`,` A slow query, a lock, a cold cache, a downstream timeout, a thread pool full.`],[`Prevent.`,` Timeouts, circuit breakers, alerts on latency percentiles and saturation.`]],
+  trade:`Tracing adds overhead, so sample a fraction of requests.`,
+  follow:`What is a correlation id? What is OpenTelemetry? What are the four golden signals?`},
+ {n:`Config and secrets in containers`,tag:`Security`,where:`Appears with Spring profiles and Kubernetes`,
+  ask:`How do you manage configuration and secrets across environments?`,
+  quality:`One image, outside config, no secrets in the image or repo.`,
+  steps:[[`One artifact.`,` The same image in every environment.`],[`ConfigMap.`,` Non-sensitive settings as environment variables or mounted files.`],[`Secret.`,` Sensitive values. Remember they are only base64 encoded, so restrict access and enable encryption at rest.`],[`Better.`,` A secret manager or vault with short-lived credentials, injected at run time.`],[`Spring.`,` Environment variables override <code>application.yml</code>, so the same jar picks up each environment's values.`]],
+  trade:`A vault adds an extra system and failure mode, and removes long-lived secrets from the cluster.`,
+  follow:`How do you rotate a database password without downtime? What is the risk of putting secrets in environment variables? (they can leak through dumps and logs)`}
+ ]},
+ {t:`p`,h:`<h2>Where this came from</h2><p>Topics were drawn from current Docker, Kubernetes, DevOps and Java-on-containers interview guides. They are general, not Pune-specific. Cloud examples use AWS names for familiarity, and every idea has a direct equivalent on Azure and Google Cloud.</p>`},
+ {t:`links`,items:[
+  [`Kubernetes and Docker interview questions (2026), techinterview.org`,`https://www.techinterview.org/post/3233460376/kubernetes-and-docker-interview-questions-2026/`],
+  [`Java interview questions: Docker and Kubernetes section`,`https://viacheslavchernyshov.github.io/java-interview-questions-and-answers/questions/14-docker-kubernetes/`],
+  [`Docker and Kubernetes interview questions 2026, lets-code.co.in`,`https://lets-code.co.in/articles/docker-kubernetes-interview-questions`],
+  [`45 Kubernetes interview questions and answers (2026), Weekday`,`https://www.weekday.works/post/kubernetes-interview-questions`],
+  [`Hands-on Kubernetes interview questions, TheServerSide`,`https://theserverside.com/blog/Coffee-Talk-Java-News-Stories-and-Opinions/Hands-on-Kubernetes-interview-questions/`],
+  [`Top 60 Kubernetes interview questions (2026), Hyring`,`https://hyring.com/jobseeker-toolkit/interview-questions/technical/kubernetes`]]}
+]}
+
+];
+
+/* ================= RENDER ================= */
+var STAGES=[
+ {l:'1 server',hurt:'Nothing yet.',fix:'One app server and one database is a perfectly good start. Spend your effort on a clean data model and the right indexes.',cost:'None, and that is the point. Every extra part is something to run and debug.'},
+ {l:'Slow queries',hurt:'Pages slow down because the app and database share one machine, and some queries scan whole tables.',fix:'Add indexes. Move the database to its own machine. Use a bigger machine if needed.',cost:'A bigger machine has a ceiling, and one failure still takes everything down.'},
+ {l:'Read-heavy',hurt:'The database is busy answering the same read questions again and again.',fix:'Add a cache for popular data. Add read replicas (copies for reading).',cost:'Data can be slightly stale. You now have to decide when to refresh the cache.'},
+ {l:'One server is not enough',hurt:'One app server cannot take the traffic, and if it dies, the site is down.',fix:'Run several identical app servers behind a load balancer. Keep them stateless, so any server can handle any request.',cost:'You must move user sessions out of server memory, and handle deployments carefully.'},
+ {l:'Slow work blocks users',hurt:'Sending emails or making reports makes users wait. Spikes of traffic can overwhelm the database.',fix:'Put slow work on a queue and let workers process it in the background.',cost:'Duplicates can happen, so workers must be safe to run twice. Users see "pending" for a while.'},
+ {l:'Data too big',hurt:'One database cannot hold all the data or take all the writes.',fix:'Split the data across several databases by a key, such as user id. This is sharding.',cost:'Queries across shards are hard, and a popular key can overload one shard.'},
+ {l:'Global users',hurt:'Users far from your servers get slow responses, and one data-center outage takes everyone down.',fix:'Serve static files from a CDN. Run in more than one region and route users to the nearest one.',cost:'Data in different regions can briefly disagree, and the bill grows a lot.'}
+];
+
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+
+function fmt(n){
+  if(n>=1e9)return (n/1e9).toFixed(1)+' B';
+  if(n>=1e6)return (n/1e6).toFixed(1)+' M';
+  if(n>=1e3)return (n/1e3).toFixed(1)+' K';
+  return n<10?n.toFixed(1):String(Math.round(n));
+}
+function fmtBytes(n){var u=['B','KB','MB','GB','TB','PB'],i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(1):Math.round(n))+' '+u[i]}
+
+function renderBlock(b,host){
+  var n;
+  switch(b.t){
+  case 'p': host.appendChild(el('div','sec',b.h));break;
+  case 'plain': n=el('div','box');n.appendChild(el('div','label','In plain words'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'analogy': n=el('div','box plain');n.appendChild(el('div','label','Picture it'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'mistake': n=el('div','box mistake');n.appendChild(el('div','label','Common mistake'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'remember': n=el('div','box remember');n.appendChild(el('div','label','Remember this'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'steps':
+    n=el('ol','steps');
+    b.items.forEach(function(s){var li=el('li',null,'<div><b>'+s[0]+'</b>'+s[1]+'</div>');n.appendChild(li)});
+    host.appendChild(n);break;
+  case 'two':
+    n=el('div','two');
+    [b.a,b.b].forEach(function(x){n.appendChild(el('div',null,'<div class="h">'+x.h+'</div><p>'+x.b+'</p>'))});
+    host.appendChild(n);break;
+  case 'cards':
+    n=el('div','cards');
+    b.items.forEach(function(c){
+      n.appendChild(el('div','card','<h3>'+c.h+'</h3>'+(c.pic?'<div class="pic">'+c.pic+'</div>':'')+'<p>'+c.b+'</p>'+(c.small?'<p class="small">'+c.small+'</p>':'')));
+    });
+    host.appendChild(n);break;
+  case 'code':
+    n=el('div','sec');
+    var cap=el('div','cap'+(b.bad?' bad':'')+(b.good?' good':''),b.cap||'');
+    if(b.use)cap.className+=' use';
+    var pre=document.createElement('pre');pre.textContent=b.code;if(b.use)pre.className='use';
+    n.appendChild(cap);n.appendChild(pre);host.appendChild(n);break;
+  case 'check':
+    n=el('div','check');
+    n.appendChild(el('div','label','Check yourself'));
+    n.appendChild(el('p','q',b.q));
+    var btn=el('button','reveal','Think, then show the answer');btn.type='button';
+    var ans=el('div','ans',b.a);ans.hidden=true;
+    btn.addEventListener('click',function(){ans.hidden=!ans.hidden;btn.textContent=ans.hidden?'Think, then show the answer':'Hide the answer'});
+    n.appendChild(btn);n.appendChild(ans);host.appendChild(n);break;
+  case 'qbank': host.appendChild(buildQbank(b.items));break;
+  case 'diagram': host.appendChild(buildDiagram(b));break;
+  case 'links':
+    n=el('div','links');
+    b.items.forEach(function(x){var a=document.createElement('a');a.href=x[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=x[0];n.appendChild(a)});
+    host.appendChild(n);break;
+  case 'calc': host.appendChild(buildCalc());break;
+  case 'stages': host.appendChild(buildStages());break;
+  case 'drill': host.appendChild(buildDrill());break;
+  }
+}
+
+function buildCalc(){
+  var box=el('div','check');
+  box.appendChild(el('div','label','Try it'));
+  box.appendChild(el('p',null,'Change the numbers and watch what moves. Start with the example from above.'));
+  box.appendChild(el('div','fields',
+    '<div class="field"><label for="c-dau">Daily users (millions)</label><input id="c-dau" type="number" min="0" step="any" value="10"></div>'+
+    '<div class="field"><label for="c-act">Actions per user per day</label><input id="c-act" type="number" min="0" step="any" value="20"></div>'+
+    '<div class="field"><label for="c-rpw">Reads for every 1 write</label><input id="c-rpw" type="number" min="0" step="any" value="10"></div>'));
+  var out=el('div','out');out.setAttribute('aria-live','polite');box.appendChild(out);
+  var msg=el('div','box');box.appendChild(msg);
+  function num(id){var v=parseFloat(box.querySelector(id).value);return isFinite(v)&&v>=0?v:0}
+  function run(){
+    var dau=num('#c-dau')*1e6,act=num('#c-act'),rpw=num('#c-rpw');
+    var day=dau*act,avg=day/86400,pk=avg*3,w=pk/(rpw+1),r=pk-w;
+    var data=day/(rpw+1)*1000*365;
+    out.innerHTML=
+      '<div><span>Requests per day</span><b>'+fmt(day)+'</b></div>'+
+      '<div><span>Average per second</span><b>'+fmt(avg)+'</b></div>'+
+      '<div><span>Busy-hour per second (x3)</span><b>'+fmt(pk)+'</b></div>'+
+      '<div><span>Reads per second at peak</span><b>'+fmt(r)+'</b></div>'+
+      '<div><span>Writes per second at peak</span><b>'+fmt(w)+'</b></div>'+
+      '<div><span>New data per year (1 KB per write)</span><b>'+fmtBytes(data)+'</b></div>';
+    var m;
+    if(r<1000&&w<500)m='<b>What this means:</b> one well-tuned database can handle this. Keep it simple.';
+    else if(r<10000)m='<b>What this means:</b> reads are the pressure. Add a cache and maybe read replicas.';
+    else m='<b>What this means:</b> reads are very high. You need a cache layer, and likely a CDN for static files.';
+    if(w>=5000)m+=' Writes are high too, so think about a queue and splitting the data.';
+    msg.innerHTML='<p>'+m+'</p>';
+  }
+  box.addEventListener('input',run);run();
+  return box;
+}
+
+function buildStages(){
+  var wrap=el('div','sec'),sel=2;
+  var row=el('div','row');wrap.appendChild(row);
+  var panel=el('div','check');panel.setAttribute('aria-live','polite');wrap.appendChild(panel);
+  function draw(){
+    Array.prototype.forEach.call(row.children,function(b,i){b.setAttribute('aria-pressed',i===sel?'true':'false')});
+    var s=STAGES[sel];
+    panel.innerHTML='<div><div class="label">What hurts</div><p>'+s.hurt+'</p></div>'+
+      '<div><div class="label">The fix</div><p>'+s.fix+'</p></div>'+
+      '<div><div class="label">What the fix costs</div><p>'+s.cost+'</p></div>';
+  }
+  STAGES.forEach(function(s,i){
+    var b=el('button','stage',s.l);b.type='button';
+    b.addEventListener('click',function(){sel=i;draw()});row.appendChild(b);
+  });
+  draw();return wrap;
+}
+
+function buildDiagram(b){
+  var spec=b.d,NS='http://www.w3.org/2000/svg';
+  function s(tag,attrs,text){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+  var W=spec.w||420,byId={};
+  spec.nodes.forEach(function(n){
+    var hdr=n.k==='state'?34:(n.k==='note'?0:(n.s?38:28));
+    var ml=n.m?n.m.length:0;
+    if(n.k==='state')n.h=34;
+    else if(n.k==='note')n.h=ml*14+14;
+    else n.h=hdr+(ml?10+14*ml:0);
+    n.hdr=hdr;byId[n.id]=n;
+  });
+  var H=0;spec.nodes.forEach(function(n){H=Math.max(H,n.y+n.h)});H+=14;
+  var svg=s('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':spec.alt||''});
+  var defs=s('defs',{});
+  function marker(id,w,h,rx,ry,child){
+    var m=s('marker',{id:id,viewBox:'0 0 '+w+' '+h,refX:rx,refY:ry,markerWidth:w,markerHeight:h,markerUnits:'userSpaceOnUse',orient:'auto'});
+    m.appendChild(child);defs.appendChild(m);
+  }
+  var uid='m'+Math.floor(Math.random()*1e6);
+  marker(uid+'t',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-tri'}));
+  marker(uid+'o',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11','class':'mk-open'}));
+  marker(uid+'f',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-fill'}));
+  marker(uid+'d',14,12,0,6,s('path',{d:'M1,6 L7,1 L13,6 L7,11 z','class':'mk-tri'}));
+  svg.appendChild(defs);
+  function clip(n,tx,ty){
+    var cx=n.x+n.w/2,cy=n.y+n.h/2,dx=tx-cx,dy=ty-cy;
+    if(dx===0&&dy===0)return [cx,cy];
+    var t=Math.min(dx!==0?(n.w/2)/Math.abs(dx):1e9,dy!==0?(n.h/2)/Math.abs(dy):1e9);
+    return [cx+dx*t,cy+dy*t];
+  }
+  spec.edges.forEach(function(e){
+    var A=byId[e.a],B=byId[e.b];
+    var ax=A.x+A.w/2,ay=A.y+A.h/2,bx=B.x+B.w/2,by=B.y+B.h/2;
+    var dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy)||1,o=e.o||0;
+    var nx=-dy/len*o,ny=dx/len*o;
+    var p1=clip(A,bx+nx,by+ny),p2=clip(B,ax+nx,ay+ny);
+    p1=[p1[0]+nx,p1[1]+ny];p2=[p2[0]+nx,p2[1]+ny];
+    var k=e.k||'arrow',dash=(k==='implements'||k==='uses');
+    var line=s('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],'class':'dg-e'+(dash?' dash':'')});
+    if(k==='extends'||k==='implements')line.setAttribute('marker-end','url(#'+uid+'t)');
+    else if(k==='uses')line.setAttribute('marker-end','url(#'+uid+'o)');
+    else if(k==='has'){line.setAttribute('marker-start','url(#'+uid+'d)');line.setAttribute('marker-end','url(#'+uid+'o)')}
+    else line.setAttribute('marker-end','url(#'+uid+'f)');
+    svg.appendChild(line);
+    if(e.l){
+      var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2,lw=e.l.length*5.6+10;
+      svg.appendChild(s('rect',{x:mx-lw/2,y:my-8,width:lw,height:15,rx:3,'class':'dg-lb'}));
+      svg.appendChild(s('text',{x:mx,y:my+3.5,'class':'dg-l'},e.l));
+    }
+  });
+  spec.nodes.forEach(function(n){
+    var cls=n.k==='iface'?'dg-if':(n.k==='state'?'dg-st':(n.k==='note'?'dg-note':'dg-box'));
+    svg.appendChild(s('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:n.k==='state'?17:6,'class':cls}));
+    if(n.k==='note'){
+      (n.m||[]).forEach(function(l,i){svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+16+i*14,'class':'dg-n'},l))});
+      return;
+    }
+    if(n.s)svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+15,'class':'dg-s'},'«'+n.s+'»'));
+    svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+(n.k==='state'?22:(n.s?31:19)),'class':'dg-t'},n.t));
+    if(n.m&&n.m.length){
+      svg.appendChild(s('line',{x1:n.x,y1:n.y+n.hdr,x2:n.x+n.w,y2:n.y+n.hdr,'class':'dg-sep'}));
+      n.m.forEach(function(l,i){svg.appendChild(s('text',{x:n.x+8,y:n.y+n.hdr+6+(i+1)*14-3,'class':'dg-m'},l))});
+    }
+  });
+  var wrap=el('div','diagram');
+  wrap.appendChild(svg);
+  if(b.cap)wrap.appendChild(el('p','dcap',b.cap));
+  return wrap;
+}
+
+function buildQbank(items){
+  var wrap=el('div');
+  items.forEach(function(q){
+    var d=document.createElement('details');d.className='q';
+    var s=document.createElement('summary');
+    s.innerHTML='<span class="qleft"><span>'+q.n+'</span><span class="pill">'+q.tag+'</span></span>';
+    d.appendChild(s);
+    var b=el('div','qbody');
+    b.appendChild(el('p','where','<b>Seen in:</b> '+q.where));
+    b.appendChild(el('div','qsec','<div class="label">The question</div><p>'+q.ask+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">What matters most</div><p>'+q.quality+'</p>'));
+    var st=el('div','qsec','<div class="label">Walk through it</div>');
+    var ol=el('ol','steps');
+    q.steps.forEach(function(x){ol.appendChild(el('li',null,'<div><b>'+x[0]+'</b>'+x[1]+'</div>'))});
+    st.appendChild(ol);b.appendChild(st);
+    if(q.code){
+      var c=el('div','qsec');
+      c.appendChild(el('div','cap',q.code.cap));
+      var pre=document.createElement('pre');pre.textContent=q.code.code;c.appendChild(pre);
+      if(q.code.use){
+        c.appendChild(el('div','cap use','How it is used'));
+        var p2=document.createElement('pre');p2.className='use';p2.textContent=q.code.use;c.appendChild(p2);
+      }
+      b.appendChild(c);
+    }
+    b.appendChild(el('div','qsec','<div class="label">Trade-offs to say out loud</div><p>'+q.trade+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">Follow-ups to expect</div><p>'+q.follow+'</p>'));
+    d.appendChild(b);wrap.appendChild(d);
+  });
+  return wrap;
+}
+
+var P={lld:['Design a parking lot','Design an elevator system','Design Splitwise (shared expenses)','Design a library system','Design a vending machine','Design an LRU cache','Design a chess game','Design an ATM','Design a movie ticket booking system','Design a logging framework'],
+ hld:['Design a URL shortener','Design a news feed','Design a chat application','Design a video streaming service','Design a ride-hailing app','Design a notification system','Design a web crawler','Design search autocomplete','Design a payment system','Design a ticket booking system']};
+var timerState={remaining:1200,running:false,endAt:0,id:null};
+function buildDrill(){
+  var box=el('div','check'),kind='lld',cur='';
+  box.appendChild(el('div','label','Today\'s drill'));
+  var pill=el('span','pill','LLD');var pw=el('div');pw.appendChild(pill);box.appendChild(pw);
+  var prompt=el('p',null,'');prompt.style.cssText='font:600 1.2rem/1.4 var(--font-display)';box.appendChild(prompt);
+  var r1=el('div','row');
+  var bl=el('button','reveal','New LLD prompt'),bh=el('button','reveal','New HLD prompt');bl.type=bh.type='button';
+  r1.appendChild(bl);r1.appendChild(bh);box.appendChild(r1);
+  var time=el('div','timer','20:00');box.appendChild(time);
+  var phase=el('p',null,'Ready when you are.');box.appendChild(phase);
+  var r2=el('div','row');
+  var st=el('button','btn','Start'),rs=el('button','btn ghost','Reset');st.type=rs.type='button';
+  r2.appendChild(st);r2.appendChild(rs);box.appendChild(r2);
+  function pick(k){kind=k;var l=P[k],p=cur;while(p===cur)p=l[Math.floor(Math.random()*l.length)];cur=p;prompt.textContent=p;pill.textContent=k.toUpperCase()}
+  function render(){
+    var rem=timerState.remaining,m=Math.floor(rem/60),s=rem%60;
+    time.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    var el_=1200-rem,txt;
+    if(rem<=0)txt='Time. Now write one line: what did I skip or hand-wave?';
+    else if(!timerState.running&&el_===0)txt='Ready when you are. Talk out loud.';
+    else if(el_<300)txt='Clarify: ask questions, pick three must-haves and one key quality.';
+    else if(el_<900)txt=kind==='lld'?'Model: nouns, verbs, who owns what, what will change.':'Model: numbers, the two actions, smallest design, what breaks first.';
+    else txt='Stress and trade: two users at once, a new requirement, then the template sentence.';
+    phase.textContent=txt;
+    st.textContent=timerState.running?'Pause':(rem<=0||rem===1200?'Start':'Resume');
+  }
+  function tick(){
+    timerState.remaining=Math.max(0,Math.ceil((timerState.endAt-Date.now())/1000));
+    if(timerState.remaining<=0){timerState.running=false;clearInterval(timerState.id);timerState.id=null}
+    render();
+  }
+  st.addEventListener('click',function(){
+    if(timerState.running){timerState.running=false;clearInterval(timerState.id);timerState.id=null;render();return}
+    if(timerState.remaining<=0)timerState.remaining=1200;
+    timerState.running=true;timerState.endAt=Date.now()+timerState.remaining*1000;
+    timerState.id=setInterval(tick,500);render();
+  });
+  rs.addEventListener('click',function(){timerState.running=false;clearInterval(timerState.id);timerState.id=null;timerState.remaining=1200;render()});
+  bl.addEventListener('click',function(){pick('lld');render()});
+  bh.addEventListener('click',function(){pick('hld');render()});
+  pick('lld');render();
+  return box;
+}
+
+/* ================= PAGE ================= */
+var cur=0;
+function idx(){
+  var h=(location.hash||'').replace('#','');
+  for(var i=0;i<L.length;i++)if(L[i].id===h)return i;
+  return 0;
+}
+function drawList(){
+  var host=$('#list');host.innerHTML='';
+  var last='';
+  L.forEach(function(l,i){
+    if(l.trackName!==last){last=l.trackName;host.appendChild(el('h3',null,l.trackName))}
+    var a=document.createElement('a');a.href='#'+l.id;
+    if(i===cur)a.setAttribute('aria-current','page');
+    a.innerHTML='<span class="n">'+(i+1)+'</span><span>'+l.title+'</span><span class="'+(done[l.id]?'tick':'min')+'">'+(done[l.id]?'&#10003; done':l.min+' min')+'</span>';
+    a.addEventListener('click',function(){closeList()});
+    host.appendChild(a);
+  });
+}
+function closeList(){$('#list').classList.remove('open');$('#menu-btn').setAttribute('aria-expanded','false')}
+$('#menu-btn').addEventListener('click',function(){
+  var o=$('#list').classList.toggle('open');this.setAttribute('aria-expanded',o?'true':'false');
+});
+function meter(){
+  var n=0;L.forEach(function(l){if(done[l.id])n++});
+  $('#meter').style.width=Math.round(n/L.length*100)+'%';
+}
+function draw(){
+  cur=idx();
+  var l=L[cur];
+  document.body.setAttribute('data-track',l.track);
+  $('#where').textContent='Lesson '+(cur+1)+' of '+L.length+' · '+l.trackName;
+  var host=$('#lesson');host.innerHTML='';
+  var head=el('div');
+  head.appendChild(el('div','kicker',l.trackName+' · about '+l.min+' minutes'));
+  head.appendChild(el('h1',null,l.title));
+  head.appendChild(el('p','promise',l.promise));
+  host.appendChild(head);
+  l.blocks.forEach(function(b){renderBlock(b,host)});
+  var dr=el('label','done-row');
+  var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!done[l.id];
+  cb.addEventListener('change',function(){if(cb.checked)done[l.id]=1;else delete done[l.id];save();meter();drawList()});
+  dr.appendChild(cb);dr.appendChild(el('span',null,'I finished this lesson'));
+  host.appendChild(dr);
+  var nav=el('div','nav');
+  var pv=el('button','btn ghost','Previous');pv.type='button';pv.disabled=cur===0;
+  var nx=el('button','btn',cur===L.length-1?'Back to lesson 1':'Next lesson');nx.type='button';
+  pv.addEventListener('click',function(){if(cur>0)location.hash=L[cur-1].id});
+  nx.addEventListener('click',function(){location.hash=L[cur===L.length-1?0:cur+1].id});
+  nav.appendChild(pv);nav.appendChild(nx);host.appendChild(nav);
+  meter();drawList();
+}
+window.addEventListener('hashchange',function(){draw();window.scrollTo(0,0)});
+draw();
+})();
+</script>

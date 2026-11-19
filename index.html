@@ -59,13 +59,21 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
 .path .d{font:600 .8rem var(--font-mono);color:var(--muted);padding-top:3px}
 @media(max-width:480px){.path .row{grid-template-columns:1fr;gap:2px}}
 .foot{color:var(--muted);font-size:.9rem}
+
+.sec-h{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.sec-h h2{font-size:1.35rem;font-weight:600}
+.sec-h p{color:var(--muted);font-size:.95rem}
+.group{display:flex;flex-direction:column}
+.quick{display:flex;flex-direction:column;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.quick ol{margin:6px 0 0;padding-left:22px;color:var(--fg)}
+.quick li+li{margin-top:4px}
 </style>
 
 <div class="wrap">
   <header>
     <p class="kicker">Mid-level interview prep</p>
     <h1>Interview Prep Hub</h1>
-    <p class="lede">Low-level design, high-level design and design patterns, taught in plain words with diagrams and worked answers. Pick one lesson a day. Small and regular beats long and rare.</p>
+    <p class="lede">Design, Java, Spring, databases, messaging, security and DevOps, taught in plain words with diagrams, usage code and worked answers. Pick one lesson a day. Small and regular beats long and rare.</p>
   </header>
 
   <section class="today" aria-label="Where to continue">
@@ -74,16 +82,14 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
     <a class="go" id="today-link" href="course.html#lesson-1">Start lesson 1</a>
   </section>
 
-  <section class="cards" aria-label="Courses">
+  <section aria-label="Design">
+    <div class="sec-h"><h2>Design</h2><p>Low-level design, high-level design and the patterns behind them.</p></div>
+    <div class="cards">
     <a class="card" id="card-course" style="--c:var(--lld)" href="course.html">
       <span class="meta">30 lessons</span>
       <h2>Full course</h2>
       <p>Design thinking, LLD, HLD, practice, and a question bank of common interview questions with full answers.</p>
-      <ul>
-        <li>Four-question habit for any design</li>
-        <li>Classes, numbers, scaling, trade-offs</li>
-        <li>39 worked questions, India-focused</li>
-      </ul>
+      <ul><li>Four-question habit for any design</li><li>Classes, numbers, scaling, trade-offs</li><li>39 worked questions, India-focused</li></ul>
       <div class="bar"><i id="bar-course"></i></div>
       <span class="prog" id="prog-course">0 of 30 done</span>
       <span class="open">Open the course</span>
@@ -92,15 +98,78 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
       <span class="meta">13 lessons</span>
       <h2>Design patterns</h2>
       <p>The patterns that get asked most, each with a diagram, Java code, a usage example and interview questions.</p>
-      <ul>
-        <li>Strategy, Observer, State, Factory</li>
-        <li>Patterns hidden inside Spring</li>
-        <li>14 comparison questions answered</li>
-      </ul>
+      <ul><li>Strategy, Observer, State, Factory</li><li>Patterns hidden inside Spring</li><li>14 comparison questions answered</li></ul>
       <div class="bar"><i id="bar-pat"></i></div>
       <span class="prog" id="prog-pat">0 of 13 done</span>
       <span class="open">Open the patterns course</span>
     </a>
+    </div>
+  </section>
+
+  <section aria-label="Java and Spring">
+    <div class="sec-h"><h2>Java and Spring</h2><p>The language, the runtime and the framework, down to how they really work.</p></div>
+    <div class="cards">
+    <a class="card" id="card-jcore" style="--c:var(--lld)" href="java-core.html">
+      <span class="meta">7 lessons</span>
+      <h2>Java core and versions 8 to 21</h2>
+      <p>The language traps, collections internals, and what each Java version added, with real examples.</p>
+      <ul><li>equals, hashCode, strings, HashMap inside</li><li>Streams, records, sealed types, virtual threads</li><li>13 worked questions, including an 8 to 17 upgrade</li></ul>
+      <div class="bar"><i id="bar-jcore"></i></div>
+      <span class="prog" id="prog-jcore">0 of 7 done</span>
+      <span class="open">Open the Java course</span>
+    </a>
+    <a class="card" id="card-deep" style="--c:var(--hld)" href="java-deep.html">
+      <span class="meta">7 lessons</span>
+      <h2>Concurrency and JVM</h2>
+      <p>Threads, locks, pools, memory, garbage collection, and how to diagnose a sick service.</p>
+      <ul><li>volatile, synchronized, atomics, deadlock</li><li>Heap, G1 versus ZGC, finding leaks</li><li>Three production incidents, step by step</li></ul>
+      <div class="bar"><i id="bar-deep"></i></div>
+      <span class="prog" id="prog-deep">0 of 7 done</span>
+      <span class="open">Open the concurrency course</span>
+    </a>
+    <a class="card" id="card-spring" style="--c:var(--pat)" href="spring.html">
+      <span class="meta">6 lessons</span>
+      <h2>Spring Boot internals</h2>
+      <p>What happens under the annotations: beans, auto-configuration, proxies and @Transactional.</p>
+      <ul><li>Bean lifecycle, scopes, circular dependencies</li><li>Why @Transactional sometimes does nothing</li><li>12 worked questions</li></ul>
+      <div class="bar"><i id="bar-spring"></i></div>
+      <span class="prog" id="prog-spring">0 of 6 done</span>
+      <span class="open">Open the Spring course</span>
+    </a>
+    </div>
+  </section>
+
+  <section aria-label="Data, security and platform">
+    <div class="sec-h"><h2>Data, security and platform</h2><p>Databases, messaging, authentication and getting code to production.</p></div>
+    <div class="cards">
+    <a class="card" id="card-data" style="--c:var(--practice)" href="data.html">
+      <span class="meta">9 lessons</span>
+      <h2>SQL, JPA and Kafka</h2>
+      <p>Queries, indexes, locking, the N+1 problem, and Kafka ordering, duplicates and the outbox.</p>
+      <ul><li>SQL patterns and EXPLAIN</li><li>JPA, optimistic and pessimistic locking</li><li>21 worked questions across SQL and Kafka</li></ul>
+      <div class="bar"><i id="bar-data"></i></div>
+      <span class="prog" id="prog-data">0 of 9 done</span>
+      <span class="open">Open the data course</span>
+    </a>
+    <a class="card" id="card-auth" style="--c:var(--bank)" href="auth.html">
+      <span class="meta">7 lessons</span>
+      <h2>Auth and security</h2>
+      <p>Sessions, JWT, OAuth2, OpenID Connect and Spring Security 6, with the revoke-a-token trap.</p>
+      <ul><li>Sessions versus tokens, and JWT revocation</li><li>OAuth2 code flow with PKCE</li><li>11 worked questions</li></ul>
+      <div class="bar"><i id="bar-auth"></i></div>
+      <span class="prog" id="prog-auth">0 of 7 done</span>
+      <span class="open">Open the auth course</span>
+    </a>
+    <a class="card" id="card-devops" style="--c:var(--start)" href="devops.html">
+      <span class="meta">7 lessons</span>
+      <h2>Docker, Kubernetes, CI/CD</h2>
+      <p>Dockerfiles, pods, probes and resources, pipelines, deployment strategies and observability.</p>
+      <ul><li>Multi-stage Dockerfile for Spring Boot</li><li>Probes, limits, rollouts, CrashLoopBackOff</li><li>12 worked questions</li></ul>
+      <div class="bar"><i id="bar-devops"></i></div>
+      <span class="prog" id="prog-devops">0 of 7 done</span>
+      <span class="open">Open the DevOps course</span>
+    </a>
+    </div>
   </section>
 
   <section class="jumps" aria-label="Jump to a topic">
@@ -110,22 +179,50 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
       <a class="chip" style="--c:var(--lld)" href="course.html#lesson-3">LLD</a>
       <a class="chip" style="--c:var(--hld)" href="course.html#lesson-8">HLD</a>
       <a class="chip" style="--c:var(--practice)" href="course.html#lesson-13">Daily drill</a>
-      <a class="chip" style="--c:var(--bank)" href="course.html#lesson-14">What is asked in India</a>
       <a class="chip" style="--c:var(--bank)" href="course.html#lesson-15">HLD questions</a>
       <a class="chip" style="--c:var(--bank)" href="course.html#lesson-16">LLD questions</a>
-      <a class="chip" style="--c:var(--bank)" href="course.html#lesson-17">Java and SQL questions</a>
       <a class="chip" style="--c:var(--pat)" href="design-patterns.html#lesson-1">Patterns map</a>
       <a class="chip" style="--c:var(--pat)" href="design-patterns.html#lesson-13">Pattern questions</a>
+      <a class="chip" style="--c:var(--lld)" href="java-core.html#lesson-3">HashMap inside</a>
+      <a class="chip" style="--c:var(--lld)" href="java-core.html#lesson-7">Java questions</a>
+      <a class="chip" style="--c:var(--hld)" href="java-deep.html#lesson-2">volatile and atomics</a>
+      <a class="chip" style="--c:var(--hld)" href="java-deep.html#lesson-5">Garbage collection</a>
+      <a class="chip" style="--c:var(--hld)" href="java-deep.html#lesson-7">Concurrency questions</a>
+      <a class="chip" style="--c:var(--pat)" href="spring.html#lesson-4">@Transactional</a>
+      <a class="chip" style="--c:var(--pat)" href="spring.html#lesson-6">Spring questions</a>
+      <a class="chip" style="--c:var(--practice)" href="data.html#lesson-3">Indexes</a>
+      <a class="chip" style="--c:var(--practice)" href="data.html#lesson-5">N+1 problem</a>
+      <a class="chip" style="--c:var(--practice)" href="data.html#lesson-8">SQL questions</a>
+      <a class="chip" style="--c:var(--practice)" href="data.html#lesson-9">Kafka questions</a>
+      <a class="chip" style="--c:var(--bank)" href="auth.html#lesson-3">JWT</a>
+      <a class="chip" style="--c:var(--bank)" href="auth.html#lesson-4">OAuth2</a>
+      <a class="chip" style="--c:var(--bank)" href="auth.html#lesson-7">Auth questions</a>
+      <a class="chip" style="--c:var(--start)" href="devops.html#lesson-3">Kubernetes objects</a>
+      <a class="chip" style="--c:var(--start)" href="devops.html#lesson-7">DevOps questions</a>
     </div>
+  </section>
+
+  <section class="quick" aria-label="Short on time">
+    <span class="label">Short on time? Do these first</span>
+    <ol>
+      <li><a href="java-core.html#lesson-7">Java questions</a> and <a href="java-deep.html#lesson-7">concurrency questions</a></li>
+      <li><a href="spring.html#lesson-6">Spring Boot questions</a></li>
+      <li><a href="data.html#lesson-8">SQL and JPA questions</a></li>
+      <li><a href="course.html#lesson-15">HLD questions</a> and <a href="course.html#lesson-16">LLD questions</a></li>
+      <li><a href="auth.html#lesson-7">Auth questions</a>, then <a href="devops.html#lesson-7">DevOps questions</a></li>
+    </ol>
+    <p class="foot">Every question page says what the interviewer is looking for. Say your answer out loud before you open it.</p>
   </section>
 
   <section class="jumps" aria-label="Suggested order">
     <span class="label">A suggested order</span>
     <div class="path">
       <div class="row"><span class="d">Week 1</span><span>Full course, lessons 1 to 7: the habit, then LLD thinking. One lesson a day.</span></div>
-      <div class="row"><span class="d">Week 2</span><span>Full course, lessons 8 to 12: HLD thinking, then a full design talked through.</span></div>
-      <div class="row"><span class="d">Week 3</span><span>Design patterns course. Start with the map, then Strategy, Observer, State and Factory.</span></div>
-      <div class="row"><span class="d">Week 4</span><span>Question bank, lessons 14 to 17. Try each question out loud before opening the answer.</span></div>
+      <div class="row"><span class="d">Week 2</span><span>Full course, lessons 8 to 12: HLD thinking, then a full design talked through. Then the design patterns course.</span></div>
+      <div class="row"><span class="d">Week 3</span><span>Java core and versions, then concurrency and JVM.</span></div>
+      <div class="row"><span class="d">Week 4</span><span>Spring Boot internals, then SQL, JPA and Kafka.</span></div>
+      <div class="row"><span class="d">Week 5</span><span>Auth and security, then Docker, Kubernetes and CI/CD.</span></div>
+      <div class="row"><span class="d">Weeks 6 to 8</span><span>Question banks only. Pick five questions a day across topics and answer them out loud.</span></div>
       <div class="row"><span class="d">Every day</span><span>The 20-minute drill in lesson 13 of the full course. Do the smallest version on bad days.</span></div>
     </div>
   </section>
@@ -136,27 +233,31 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
 <script>
 (function(){
 'use strict';
+var COURSES=[{"k": "course", "key": "design-course-v1", "n": 30, "file": "course.html", "name": "Full course"}, {"k": "pat", "key": "design-patterns-v1", "n": 13, "file": "design-patterns.html", "name": "Design patterns"}, {"k": "jcore", "key": "java-core-v1", "n": 7, "file": "java-core.html", "name": "Java core and versions 8 to 21"}, {"k": "deep", "key": "java-deep-v1", "n": 7, "file": "java-deep.html", "name": "Concurrency and JVM"}, {"k": "spring", "key": "spring-course-v1", "n": 6, "file": "spring.html", "name": "Spring Boot internals"}, {"k": "data", "key": "data-course-v1", "n": 9, "file": "data.html", "name": "SQL, JPA and Kafka"}, {"k": "auth", "key": "auth-course-v1", "n": 7, "file": "auth.html", "name": "Auth and security"}, {"k": "devops", "key": "devops-course-v1", "n": 7, "file": "devops.html", "name": "Docker, Kubernetes, CI/CD"}];
 function load(key){try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){return {}}}
 function count(o){var n=0;for(var k in o)if(o[k])n++;return n}
-var course=load('design-course-v1'),pat=load('design-patterns-v1');
-var nc=count(course),np=count(pat);
-function set(id,txt){document.getElementById(id).textContent=txt}
-set('prog-course',nc+' of 30 done');
-set('prog-pat',np+' of 13 done');
-document.getElementById('bar-course').style.width=Math.round(nc/30*100)+'%';
-document.getElementById('bar-pat').style.width=Math.round(np/13*100)+'%';
-// continue where you left off: first lesson of the full course not yet ticked
-if(nc>0&&nc<30){
-  var next=0;
-  for(var i=1;i<=30;i++){if(!course['lesson-'+i]){next=i;break}}
-  if(next){
-    set('today-text','You have finished '+nc+' of 30 lessons in the full course. Next up is lesson '+next+'.');
-    var a=document.getElementById('today-link');
-    a.href='course.html#lesson-'+next;a.textContent='Continue with lesson '+next;
+function set(id,txt){var e=document.getElementById(id);if(e)e.textContent=txt}
+var state=COURSES.map(function(c){var o=load(c.key);return {c:c,o:o,d:count(o)}});
+var any=false;
+state.forEach(function(s){
+  if(s.d>0)any=true;
+  set('prog-'+s.c.k,s.d+' of '+s.c.n+' done');
+  var b=document.getElementById('bar-'+s.c.k);if(b)b.style.width=Math.round(s.d/s.c.n*100)+'%';
+});
+// continue where you left off: first course, in order, that still has an unticked lesson
+if(any){
+  var pick=null;
+  for(var i=0;i<state.length;i++){if(state[i].d<state[i].c.n){pick=state[i];break}}
+  var a=document.getElementById('today-link');
+  if(pick){
+    var next=1;
+    for(var j=1;j<=pick.c.n;j++){if(!pick.o['lesson-'+j]){next=j;break}}
+    set('today-text',pick.d>0?'You are '+pick.d+' of '+pick.c.n+' through "'+pick.c.name+'". Next up is lesson '+next+'.':'Next course in your list: "'+pick.c.name+'". Start with lesson '+next+'.');
+    a.href=pick.c.file+'#lesson-'+next;a.textContent='Continue with lesson '+next;
+  }else{
+    set('today-text','Every lesson is ticked. Now work the question banks out loud, and keep the daily drill going.');
+    a.href='course.html#lesson-13';a.textContent='Open the daily drill';
   }
-}else if(nc===30){
-  set('today-text','You finished the full course. Redo the daily drill, or work through the patterns course.');
-  var b=document.getElementById('today-link');b.href='course.html#lesson-13';b.textContent='Open the daily drill';
 }
 })();
 </script>

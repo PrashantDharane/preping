@@ -1,0 +1,931 @@
+<title>Auth and Security Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#EDEBE4; --fg:#1D2530; --muted:#556170; --line:#DAD7CD;
+  --start:#4B3FA8; --lld:#0B6B6A; --hld:#244A8F; --practice:#9A4A12; --bank:#8A2D63; --pat:#3F6B1F;
+  --accent:var(--start);
+  --start-soft:#E7E4F7; --bank-soft:#F6E1EE; --pat-soft:#E3F0D3; --accent-soft:var(--start-soft); --lld-soft:#D9EFED; --hld-soft:#E0E8F8; --practice-soft:#F8E6D6;
+  --good:#17794A; --good-soft:#DCF2E6; --bad:#B3261E; --bad-soft:#FBE2DF; --warn-soft:#FBEBCD; --warn:#8A4B00;
+  --code-bg:#F0EEE7; --on-accent:#FFFFFF;
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+    --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+    --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+    --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+    --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+  --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+  --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+  --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+  --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+}
+body[data-track="start"]{--accent:var(--start);--accent-soft:var(--start-soft)}
+body[data-track="lld"]{--accent:var(--lld);--accent-soft:var(--lld-soft)}
+body[data-track="hld"]{--accent:var(--hld);--accent-soft:var(--hld-soft)}
+body[data-track="practice"]{--accent:var(--practice);--accent-soft:var(--practice-soft)}
+body[data-track="bank"]{--accent:var(--bank);--accent-soft:var(--bank-soft)}
+body[data-track="patterns"]{--accent:var(--pat);--accent-soft:var(--pat-soft)}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.75 var(--font-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;display:flex;align-items:center;gap:12px}
+.bar .where{flex:1;min-width:0;font:500 .85rem var(--font-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.92rem}
+body[data-track="auth"]{--accent:var(--bank);--accent-soft:var(--bank-soft)}
+.homelink{color:var(--accent);text-decoration:none;font-weight:600;font-size:.92rem;padding:8px 4px}
+.meter{height:4px;background:var(--surface-2)}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* lesson list */
+.list{display:none;padding:16px 0 8px}
+.list.open{display:block}
+.list h3{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.list a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--fg);font-size:.98rem}
+.list a:hover{background:var(--surface-2)}
+.list a[aria-current="page"]{background:var(--surface);border:1px solid var(--line)}
+.list .n{font:500 .8rem var(--font-mono);color:var(--muted)}
+.list .tick{font-size:.85rem;color:var(--good)}
+.list .min{font:400 .75rem var(--font-mono);color:var(--muted)}
+
+/* lesson */
+.lesson{padding-top:36px;display:flex;flex-direction:column;gap:28px}
+.kicker{font:600 .78rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lesson h1{font-size:clamp(1.9rem,5vw,2.5rem);font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.promise{color:var(--muted);font-size:1.08rem;margin-top:10px}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font:600 .75rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.sec h2{font-size:1.3rem;font-weight:600}
+.sec p+p{margin-top:2px}
+b,strong{font-weight:600}
+.box{border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.box.plain{background:var(--surface);border:1px solid var(--line)}
+.box.mistake{background:var(--bad-soft)}
+.box.mistake .label{color:var(--bad)}
+.box.remember{background:var(--warn-soft)}
+.box.remember .label{color:var(--warn)}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px}
+ol.steps li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);font:600 .85rem var(--font-mono);display:grid;place-items:center;margin-top:2px}
+ol.steps b{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;min-width:0}
+.two .h{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{font-size:1.05rem}
+.card .pic{color:var(--accent);font-weight:600;font-size:.95rem}
+.card .small{color:var(--muted);font-size:.93rem}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 .84rem/1.6 var(--font-mono);tab-size:2}
+.cap{font:500 .75rem var(--font-mono);color:var(--muted);margin-bottom:-4px}
+.cap.bad{color:var(--bad)} .cap.good{color:var(--good)}
+.cap.use{color:var(--accent);font-weight:600}
+pre.use{border-left:3px solid var(--accent)}
+.check{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.check .q{font-weight:600}
+.reveal{align-self:flex-start;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.ans{background:var(--good-soft);border-radius:10px;padding:12px 14px}
+.ans[hidden]{display:none}
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px 20px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.done-row{display:flex;align-items:center;gap:10px}
+.done-row input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* calculator + timer */
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.85rem;color:var(--muted)}
+.field input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:500 1rem var(--font-mono)}
+.out{display:flex;flex-direction:column}
+.out div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.out span{color:var(--muted);font-size:.95rem}
+.out b{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.timer{font:500 clamp(2.6rem,9vw,3.6rem)/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.stage{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 .85rem var(--font-mono)}
+.stage[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+code{font:500 .86em var(--font-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre code{padding:0;background:none}
+
+/* diagrams */
+.diagram{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.diagram svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.diagram .dcap{font-size:.88rem;color:var(--muted);text-align:center}
+.dg-box{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.2}
+.dg-if{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-st{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-note{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-dasharray:4 3}
+.dg-sep{stroke:var(--muted);stroke-width:1;opacity:.6}
+.dg-t{font:600 12.5px var(--font-display);fill:var(--fg);text-anchor:middle}
+.dg-s{font:italic 400 10px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-m{font:400 10.5px var(--font-mono);fill:var(--fg)}
+.dg-n{font:400 10.5px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-e{stroke:var(--muted);stroke-width:1.4;fill:none}
+.dg-e.dash{stroke-dasharray:5 4}
+.dg-lb{fill:var(--surface)}
+.dg-l{font:500 10.5px var(--font-body);fill:var(--fg);text-anchor:middle}
+.mk-tri{fill:var(--surface);stroke:var(--muted);stroke-width:1.2}
+.mk-open{fill:none;stroke:var(--muted);stroke-width:1.4}
+.mk-fill{fill:var(--muted);stroke:none}
+/* question bank */
+details.q{border:1px solid var(--line);background:var(--surface);border-radius:14px}
+details.q+details.q{margin-top:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 1.05rem/1.3 var(--font-display)}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"+";font:500 1.3rem var(--font-mono);color:var(--accent);flex:none}
+details.q[open]>summary::after{content:"\2212"}
+details.q[open]>summary{border-bottom:1px solid var(--line)}
+.qleft{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.qbody{padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.qbody .where{font-size:.9rem;color:var(--muted)}
+.qsec{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qlist{margin:0;padding-left:20px}
+.qlist li+li{margin-top:6px}
+.links{display:flex;flex-direction:column;gap:8px}
+.links a{color:var(--accent);word-break:break-word}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <a class="homelink" href="index.html">Home</a>
+    <span class="where" id="where">Lesson 1</span>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="list">All lessons</button>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <nav class="list" id="list" aria-label="Lessons"></nav>
+  <main class="lesson" id="lesson"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var KEY='auth-course-v1';
+var done={};
+try{done=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){done={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(done))}catch(e){}}
+
+/* ================= CONTENT ================= */
+/* block types: p, plain, analogy, steps, two, cards, code, mistake, check, remember, calc, drill, stages */
+var L=[
+/* ---------- 1 ---------- */
+{id:`lesson-1`,track:`auth`,trackName:`Auth and security`,title:`Authentication vs authorization, and what gets asked`,min:9,
+ promise:`Two words that sound alike and are asked in every backend interview. Get the difference crisp, then see the map of the whole topic.`,
+ blocks:[
+ {t:`plain`,h:`<b>Authentication</b> answers "who are you?". <b>Authorization</b> answers "what are you allowed to do?". Authentication always comes first. You cannot decide what someone may do until you know who they are.`},
+ {t:`analogy`,h:`At an office building, the guard at the gate checks your ID card. That is authentication. Your card then opens only the floors you work on. That is authorization. A valid card does not open every door.`},
+ {t:`diagram`,cap:`The request meets authentication first. Authorization is checked after the system knows who you are.`,d:{w:420,alt:`Flow: Request goes to Authentication, then Authorization, then the resource`,nodes:[
+   {id:`rq`,t:`Request`,x:10,y:20,w:80,k:`state`},
+   {id:`an`,t:`Authentication`,s:`who are you?`,x:120,y:6,w:130},
+   {id:`az`,t:`Authorization`,s:`what may you do?`,x:280,y:6,w:130},
+   {id:`r1`,t:`401 Unauthorized`,x:100,y:80,w:150,k:`note`,m:[`identity not proven`]},
+   {id:`r2`,t:`403 Forbidden`,x:270,y:80,w:140,k:`note`,m:[`known, but not allowed`]}],
+  edges:[{a:`rq`,b:`an`},{a:`an`,b:`az`},{a:`an`,b:`r1`,k:`uses`},{a:`az`,b:`r2`,k:`uses`}]}},
+ {t:`p`,h:`<h2>The status codes people mix up</h2>`},
+ {t:`two`,a:{h:`401 Unauthorized`,b:`The name is misleading. It really means "unauthenticated": no valid credentials were given. The client can fix it by logging in or sending a valid token.`},b:{h:`403 Forbidden`,b:`The server knows who you are and says no. Logging in again will not help. You need a different permission.`}},
+ {t:`p`,h:`<h2>The map of this course</h2>`},
+ {t:`cards`,items:[
+   {h:`Lesson 2: Sessions and tokens`,b:`Two ways to remember a logged-in user. Which one scales, and why.`},
+   {h:`Lesson 3: JWT`,b:`What is inside one, how to check it, and the famous "how do you revoke it?" question.`},
+   {h:`Lesson 4: OAuth2 and OIDC`,b:`"Login with Google" explained. The flow that gets asked most.`},
+   {h:`Lesson 5: Spring Security`,b:`The filter chain, the config you actually write, and method-level rules.`},
+   {h:`Lesson 6: Access models and API safety`,b:`RBAC, passwords, CSRF, CORS and service-to-service calls.`},
+   {h:`Lesson 7: Questions with full answers`,b:`Eleven questions worked end to end.`}]},
+ {t:`remember`,h:`Interview guides on auth for experienced developers keep returning to the same cluster: sessions versus JWT, how to revoke a token, the OAuth2 authorization-code flow with PKCE, and Spring Security configuration. Weight your time that way.`},
+ {t:`mistake`,h:`Saying "authentication and authorization" as one blur. Interviewers often start with this to see if you are precise. Keep two sentences ready: one for each word, and the 401 versus 403 difference.`},
+ {t:`check`,q:`A user is logged in but opens the admin page. Which status code, and why?`,a:`403. The system knows who they are (authenticated), but they lack the permission (not authorized). 401 would mean the system could not tell who they are.`}
+]},
+
+/* ---------- 2 ---------- */
+{id:`lesson-2`,track:`auth`,trackName:`Auth and security`,title:`Sessions vs tokens: how a server remembers you`,min:12,
+ promise:`HTTP forgets you after every request. There are two ways to fix that. Knowing the trade-off between them is the base of every auth answer.`,
+ blocks:[
+ {t:`plain`,h:`HTTP is <b>stateless</b>. Every request arrives as a stranger. After login, something must travel with each request to say "it is still me". That something is either a <b>session id</b> (a reference) or a <b>token</b> (the proof itself).`},
+ {t:`analogy`,h:`A <b>session</b> is a cloakroom ticket: a small number, and the coat stays in the cloakroom. A <b>token</b> is a signed passport: everything about you is printed on it, and any officer can check the stamp without calling anyone.`},
+ {t:`two`,a:{h:`Session (stateful)`,b:`Server stores the user's details in memory, Redis or a database. The browser holds only a random id in a cookie. Each request: look up the id.`},b:{h:`Token (stateless)`,b:`Server signs a token containing the user id and roles. The client sends it back each time. Server only verifies the signature. No lookup.`}},
+ {t:`diagram`,cap:`Session: the server keeps the data. Token: the client carries it.`,d:{w:420,alt:`Two lanes comparing session lookup with token verification`,nodes:[
+   {id:`b1`,t:`Browser`,x:6,y:14,w:84},
+   {id:`s1`,t:`Server A`,x:170,y:14,w:84},
+   {id:`st`,t:`Session store`,s:`Redis`,x:318,y:6,w:96},
+   {id:`b2`,t:`Client`,x:6,y:110,w:84},
+   {id:`s2`,t:`Server A or B`,x:170,y:110,w:110},
+   {id:`nt`,t:`No store needed`,x:318,y:116,w:96,k:`note`,m:[`just verify`]}],
+  edges:[{a:`b1`,b:`s1`,l:`cookie`},{a:`s1`,b:`st`,l:`lookup`},{a:`b2`,b:`s2`,l:`token`},{a:`s2`,b:`nt`,k:`uses`}]}},
+ {t:`p`,h:`<h2>The trade-off, honestly</h2>`},
+ {t:`cards`,items:[
+   {h:`Session wins at: revoking`,b:`Delete the session on the server and the user is out instantly. Useful for "log out everywhere" and for banning an account.`},
+   {h:`Token wins at: scaling`,b:`Any server can verify it. No shared store on the hot path. Good for many microservices and mobile apps.`},
+   {h:`Session cost`,b:`A shared store (Redis) or sticky load balancing, so every server can find the session.`},
+   {h:`Token cost`,b:`Hard to revoke before it expires. Bigger on the wire. Anything inside it can go stale.`}]},
+ {t:`code`,cap:`Session login in Spring MVC (what a classic web app does)`,code:`@PostMapping("/login")
+public ResponseEntity<Void> login(@RequestBody LoginRequest req, HttpSession session) {
+    User u = users.verify(req.email(), req.password());   // throws if wrong
+    session.setAttribute("userId", u.getId());             // server keeps this
+    return ResponseEntity.ok().build();                    // JSESSIONID cookie is set for you
+}`},
+ {t:`code`,use:true,cap:`How it is used`,code:`// 1. Browser sends POST /login with email and password.
+// 2. Server replies: Set-Cookie: JSESSIONID=9F3A...; HttpOnly; Secure
+// 3. Every later request carries Cookie: JSESSIONID=9F3A...
+// 4. Server looks 9F3A... up and finds userId=42. With Spring Session + Redis,
+//    ANY server in the cluster can do that lookup.`},
+ {t:`remember`,h:`The honest answer to "which is better" is <b>it depends</b>. Browser app with one backend: sessions are simple and revocable. Mobile app, many services, or third-party APIs: tokens. Say which you would pick for the case in front of you, and why.`},
+ {t:`mistake`,h:`Claiming "JWT is more secure than sessions". It is not. It is a different trade. A session id in an HttpOnly cookie is very safe. A JWT in localStorage is exposed to any script injected into the page.`},
+ {t:`check`,q:`Your app runs on 10 servers behind a load balancer and uses sessions. Users keep getting logged out. What went wrong, and what are two fixes?`,a:`Each server holds sessions in its own memory, so a request landing on another server finds nothing. Fix 1: put sessions in a shared store such as Redis (Spring Session). Fix 2: sticky sessions at the load balancer, which is weaker because a server restart still loses its users. A third option is stateless tokens.`}
+]},
+
+/* ---------- 3 ---------- */
+{id:`lesson-3`,track:`auth`,trackName:`Auth and security`,title:`JWT: what is inside, and the revocation question`,min:14,
+ promise:`JWT comes up in almost every interview. Learn the parts, the checks you must do, and the one question everyone gets stuck on.`,
+ blocks:[
+ {t:`plain`,h:`A <b>JWT</b> (JSON Web Token) is three pieces joined by dots: <b>header.payload.signature</b>. The header says how it was signed. The payload carries <b>claims</b>, which are facts such as user id, roles and expiry. The signature proves nobody changed the first two parts.`},
+ {t:`analogy`,h:`It is a postcard, not a sealed letter. Anyone can read what is written on it. The signature is a tamper seal: if someone edits the card, the seal no longer matches. So never put secrets, such as a password, in a JWT.`},
+ {t:`code`,cap:`A decoded JWT (the payload part)`,code:`{
+  "sub": "42",                  // subject: the user id
+  "iss": "https://auth.myapp.in",  // issuer: who created it
+  "aud": "orders-api",          // audience: who it is meant for
+  "exp": 1767225600,            // expiry (seconds since 1970)
+  "iat": 1767224700,            // issued at
+  "roles": ["USER", "ADMIN"],
+  "jti": "a1b2c3"               // unique id of this token
+}`},
+ {t:`p`,h:`<h2>Two ways to sign</h2>`},
+ {t:`two`,a:{h:`HS256 (shared secret)`,b:`One secret signs and verifies. Simple. But every service that verifies can also forge tokens. Fine for one app.`},b:{h:`RS256 (key pair)`,b:`Auth server signs with a private key. Services verify with the public key. They cannot forge. Preferred when many services consume the token.`}},
+ {t:`p`,h:`<h2>What you must check on every request</h2>`},
+ {t:`steps`,items:[
+   [`Signature.`,` Verify with the right key. Pin the algorithm you expect.`],
+   [`Expiry (exp).`,` Reject expired tokens.`],
+   [`Issuer (iss).`,` It must be your auth server, not someone else's.`],
+   [`Audience (aud).`,` The token must be meant for this API.`],
+   [`Then roles.`,` Only after the four checks above, read the claims and authorize.`]]},
+ {t:`code`,use:true,cap:`How it is used: validating a token in Spring Boot (resource server)`,code:`# application.yml - Spring fetches the public keys and checks signature, exp and iss for you
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://auth.myapp.in
+
+// In a controller, the verified token is handed to you:
+@GetMapping("/me")
+public Map<String,Object> me(@AuthenticationPrincipal Jwt jwt) {
+    return Map.of("userId", jwt.getSubject(), "roles", jwt.getClaimAsStringList("roles"));
+}`},
+ {t:`p`,h:`<h2>The famous question: how do you revoke a JWT?</h2><p>A signed token is valid until <code>exp</code>, with no server call. So "log out" cannot just delete it. Interview guides call this out as a common trap. The honest answer has layers.</p>`},
+ {t:`steps`,items:[
+   [`Keep access tokens short.`,` Five to fifteen minutes. A stolen token dies quickly.`],
+   [`Add a refresh token.`,` Long-lived, stored on the server side, revocable. The client swaps it for a new access token. Rotate it on each use.`],
+   [`Denylist the jti.`,` For emergencies, store revoked token ids in Redis until they expire. This brings back one lookup, and that is the honest cost.`],
+   [`Rotate signing keys.`,` For a mass compromise, change the key and every old token fails.`]]},
+ {t:`p`,h:`<h2>Where does the client keep it?</h2>`},
+ {t:`cards`,items:[
+   {h:`localStorage`,b:`Easy, but any injected script can read it (XSS).`},
+   {h:`HttpOnly Secure cookie`,b:`Scripts cannot read it. But the browser sends it automatically, so you must protect against CSRF with SameSite and CSRF tokens.`}]},
+ {t:`mistake`,h:`Decoding a JWT without verifying the signature, then trusting the roles inside. Reading is not trusting. Another classic: accepting <code>alg: none</code> or letting the token pick its own algorithm. Always pin the algorithm on the server.`},
+ {t:`check`,q:`A user changes their role from ADMIN to USER, but their old token still says ADMIN for 10 more minutes. What are your options?`,a:`Accept the delay, because short expiry bounds the damage. Or make sensitive endpoints re-check the role in the database. Or put a version number in the token and compare it to the stored version. Or denylist that token id. Each trades a little statelessness for freshness.`}
+]},
+
+/* ---------- 4 ---------- */
+{id:`lesson-4`,track:`auth`,trackName:`Auth and security`,title:`OAuth2 and OpenID Connect: "Login with Google"`,min:15,
+ promise:`OAuth2 is the most misunderstood topic here. This lesson fixes it with one picture and one rule.`,
+ blocks:[
+ {t:`plain`,h:`<b>OAuth2</b> is about <b>delegated access</b>. It lets an app act on your behalf without ever seeing your password. It is an <b>authorization</b> framework. <b>OpenID Connect (OIDC)</b> is a thin layer on top that adds <b>authentication</b>: an ID token that says who the user is.`},
+ {t:`analogy`,h:`A hotel gives you a keycard. The card opens only your room, for your stay. You never get the master key, and the hotel can cancel the card without changing any locks. The access token is that keycard.`},
+ {t:`p`,h:`<h2>The four roles</h2>`},
+ {t:`cards`,items:[
+   {h:`Resource owner`,b:`The user who owns the data.`},
+   {h:`Client`,b:`The app that wants access (your web app).`},
+   {h:`Authorization server`,b:`Logs the user in and issues tokens (Keycloak, Okta, Auth0, Azure AD, Google).`},
+   {h:`Resource server`,b:`The API that holds the data and checks the access token.`}]},
+ {t:`p`,h:`<h2>The flow that gets asked: Authorization Code with PKCE</h2>`},
+ {t:`diagram`,cap:`The user logs in at the auth server, never at your app. Your app receives a short code, then swaps it for tokens.`,d:{w:420,alt:`Authorization code flow between browser, client app, auth server and API`,nodes:[
+   {id:`u`,t:`User and browser`,x:10,y:10,w:130},
+   {id:`c`,t:`Client app`,x:280,y:10,w:130},
+   {id:`a`,t:`Auth server`,x:10,y:120,w:130},
+   {id:`r`,t:`Resource API`,x:280,y:120,w:130}],
+  edges:[{a:`u`,b:`a`,l:`1 login and consent`,o:-6},{a:`a`,b:`c`,l:`2 code`,o:12},{a:`c`,b:`a`,l:`3 code + verifier`,o:12},{a:`c`,b:`r`,l:`4 access token`,o:0}]}},
+ {t:`steps`,items:[
+   [`Redirect.`,` Your app sends the browser to the auth server with a <code>code_challenge</code> (a hash of a secret it just made).`],
+   [`Login and consent.`,` The user signs in at the auth server and agrees.`],
+   [`Code comes back.`,` The browser returns to your app with a one-time <b>authorization code</b>. The code alone is useless.`],
+   [`Swap.`,` Your app sends the code plus the original secret (<code>code_verifier</code>) to the auth server and receives an access token, a refresh token and, with OIDC, an ID token.`],
+   [`Call the API.`,` Send <code>Authorization: Bearer access_token</code>. The API checks it.`]]},
+ {t:`remember`,h:`<b>PKCE</b> (said "pixy") stops a stolen code from being used. Only the app that made the secret can finish the swap. It started for mobile apps and is now recommended for every client. The newer OAuth 2.1 draft requires it and drops the implicit and password grants.`},
+ {t:`p`,h:`<h2>Which grant for which job</h2>`},
+ {t:`cards`,items:[
+   {h:`Authorization code + PKCE`,b:`Users logging in through a browser or mobile app. The default answer.`},
+   {h:`Client credentials`,b:`Service-to-service, no user. Example: the billing job calls the orders API.`},
+   {h:`Refresh token`,b:`Get a new access token without asking the user to log in again.`},
+   {h:`Implicit and password grant`,b:`Legacy and discouraged. Say you would not use them.`}]},
+ {t:`code`,use:true,cap:`How it is used: a Spring Boot app that logs users in through Google or Keycloak`,code:`# application.yml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: my-client-id
+            client-secret: my-client-secret
+            scope: openid,profile,email
+
+@Bean
+SecurityFilterChain chain(HttpSecurity http) throws Exception {
+    http.authorizeHttpRequests(a -> a.anyRequest().authenticated())
+        .oauth2Login(Customizer.withDefaults());   // adds /oauth2/authorization/google
+    return http.build();
+}`},
+ {t:`two`,a:{h:`Access token`,b:`Presented to the API. Says what you may do. Short-lived. The API may treat it as opaque or as a JWT.`},b:{h:`ID token (OIDC)`,b:`Read by the client app. Says who logged in. Always a JWT. Never send it to an API as a credential.`}},
+ {t:`mistake`,h:`Saying "I used OAuth2 to log users in". OAuth2 alone does not say who the user is. Say "OIDC on top of OAuth2". Another slip: calling the ID token and the access token the same thing.`},
+ {t:`check`,q:`Your nightly settlement job needs to call the payments API. There is no user. Which grant?`,a:`Client credentials. The job authenticates as itself with a client id and secret (or a signed assertion), gets an access token with only the scopes it needs, and calls the API.`}
+]},
+
+/* ---------- 5 ---------- */
+{id:`lesson-5`,track:`auth`,trackName:`Auth and security`,title:`Spring Security: the filter chain and the config you write`,min:16,
+ promise:`Spring Security feels like magic until you see that it is just a chain of filters. Then every question about it becomes answerable.`,
+ blocks:[
+ {t:`plain`,h:`Spring Security is a list of <b>servlet filters</b> that every web request passes through before it reaches your controller. Each filter does one job: check CORS, read the token, check CSRF, decide if the request is allowed. If one says no, the request stops there.`},
+ {t:`analogy`,h:`Airport security. Passport check, then baggage scan, then boarding gate. You must pass each one in order. Your controller is the plane. Most days it never sees the people who were turned back.`},
+ {t:`diagram`,cap:`Servlet container to a single entry filter, which runs your own ordered chain, then the controller.`,d:{w:420,alt:`Request flows through DelegatingFilterProxy, FilterChainProxy, security filters and then the controller`,nodes:[
+   {id:`rq`,t:`Request`,x:10,y:70,w:70,k:`state`},
+   {id:`fp`,t:`FilterChainProxy`,s:`one entry point`,x:100,y:50,w:120},
+   {id:`f1`,t:`Filters in order`,x:240,y:6,w:170,m:[`CORS, CSRF, Logout`,`Bearer token or Basic`,`ExceptionTranslation`,`AuthorizationFilter`]},
+   {id:`ct`,t:`Controller`,x:265,y:150,w:120}],
+  edges:[{a:`rq`,b:`fp`},{a:`fp`,b:`f1`},{a:`f1`,b:`ct`,l:`if allowed`}]}},
+ {t:`p`,h:`<h2>The config you actually write (Spring Security 6, Boot 3)</h2><p>Since version 6 you define a <code>SecurityFilterChain</code> bean. The old <code>WebSecurityConfigurerAdapter</code> was removed. Interviewers like to check that you know this.</p>`},
+ {t:`code`,cap:`A stateless REST API secured with JWT`,code:`@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity            // turns on @PreAuthorize (replaces @EnableGlobalMethodSecurity)
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain api(HttpSecurity http) throws Exception {
+        http
+          .csrf(csrf -> csrf.disable())                       // fine for pure bearer-token APIs
+          .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+          .authorizeHttpRequests(auth -> auth
+              .requestMatchers("/health", "/public/**").permitAll()
+              .requestMatchers("/admin/**").hasRole("ADMIN")
+              .anyRequest().authenticated())                  // everything else needs a valid token
+          .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()));
+        return http.build();
+    }
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();                   // slow on purpose
+    }
+}`},
+ {t:`code`,use:true,cap:`How it is used: rules on methods and reading the current user`,code:`@Service
+public class OrderService {
+
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.name")
+    public List<Order> ordersOf(String userId) { ... }   // admin, or the owner themselves
+
+    @PostAuthorize("returnObject.ownerId == authentication.name")
+    public Order get(long id) { ... }                    // checked after it loads
+}
+
+@GetMapping("/orders")
+public List<Order> mine(Authentication auth) {           // injected by Spring
+    return orderService.ordersOf(auth.getName());
+}`},
+ {t:`p`,h:`<h2>How a username and password login works inside</h2>`},
+ {t:`steps`,items:[
+   [`Filter reads the credentials.`,` It builds an unauthenticated <code>Authentication</code> object.`],
+   [`AuthenticationManager.`,` It hands the object to a <code>ProviderManager</code>, which asks each <code>AuthenticationProvider</code>.`],
+   [`DaoAuthenticationProvider.`,` It loads the user through your <code>UserDetailsService</code> and compares the password using the <code>PasswordEncoder</code>.`],
+   [`Success.`,` A fully authenticated object, with authorities, is stored in the <code>SecurityContext</code>, which is held per thread in <code>SecurityContextHolder</code>.`],
+   [`Later code reads it.`,` <code>@PreAuthorize</code> and <code>Authentication</code> parameters read from that context.`]]},
+ {t:`cards`,items:[
+   {h:`hasRole("ADMIN") vs hasAuthority("ROLE_ADMIN")`,b:`Same thing. <code>hasRole</code> adds the <code>ROLE_</code> prefix for you. A classic gotcha when roles come from a JWT claim and the prefix is missing.`},
+   {h:`Filter order matters`,b:`Your custom JWT filter must sit before the authorization filter, with <code>addFilterBefore</code>.`},
+   {h:`Context is per thread`,b:`Async work and new threads lose the logged-in user unless you propagate the context.`}]},
+ {t:`mistake`,h:`Disabling CSRF protection everywhere "because it was giving errors". That is only safe for stateless APIs that read a bearer header. If your app uses cookie sessions, the browser sends the cookie on its own, and CSRF protection is what stops a malicious page from using it.`},
+ {t:`check`,q:`A request with a valid token gets a 403 from <code>hasRole("ADMIN")</code>, but the token has <code>roles: ["ADMIN"]</code>. What do you check first?`,a:`How the claim becomes authorities. By default Spring maps the <code>scope</code> claim to <code>SCOPE_...</code> authorities and does not read your <code>roles</code> claim at all. Configure a <code>JwtAuthenticationConverter</code> with the right claim name and prefix, so ADMIN becomes <code>ROLE_ADMIN</code>.`}
+]},
+
+/* ---------- 6 ---------- */
+{id:`lesson-6`,track:`auth`,trackName:`Auth and security`,title:`Access models and API safety in the real world`,min:14,
+ promise:`How permissions are modelled, how passwords are stored, which attacks to name, and how services trust each other.`,
+ blocks:[
+ {t:`p`,h:`<h2>Models for deciding who may do what</h2>`},
+ {t:`cards`,items:[
+   {h:`RBAC: role-based`,b:`Users get roles (ADMIN, MANAGER, USER). Roles carry permissions. Simple and the most common. Weak when rules depend on the data itself.`},
+   {h:`ABAC: attribute-based`,b:`Decide using attributes: user's department, resource owner, time of day, amount. Flexible, harder to audit.`},
+   {h:`ACL or ownership`,b:`Per-object lists: "Riya can edit this doc". Fits sharing features like Drive.`},
+   {h:`Scopes`,b:`What an app may do on a user's behalf (<code>orders.read</code>). Not the same as the user's own roles.`}]},
+ {t:`remember`,h:`A strong answer mixes them: roles for broad access, plus an ownership check for each record. "A manager role does not let me read every user's order, only my team's." Always check <b>object-level</b> access, not just the role.`},
+ {t:`code`,cap:`The bug that gets people on bug-bounty lists (IDOR) and the fix`,code:`// BAD: any logged-in user can read any order by changing the id in the URL
+@GetMapping("/orders/{id}")
+public Order get(@PathVariable long id) { return repo.findById(id).orElseThrow(); }
+
+// GOOD: the query itself includes the owner
+@GetMapping("/orders/{id}")
+public Order get(@PathVariable long id, Authentication auth) {
+    return repo.findByIdAndOwnerId(id, auth.getName()).orElseThrow(NotFoundException::new);
+}`},
+ {t:`p`,h:`<h2>Storing passwords</h2>`},
+ {t:`steps`,items:[
+   [`Never store plain text, and never encrypt.`,` Encryption can be reversed. You need one-way hashing.`],
+   [`Use a slow, salted hash.`,` BCrypt, Argon2 or PBKDF2. A salt is random data per user, so two equal passwords look different. Slowness makes guessing expensive.`],
+   [`Not plain SHA-256 or MD5.`,` They are built to be fast, which helps an attacker.`],
+   [`Spring helps.`,` <code>PasswordEncoderFactories.createDelegatingPasswordEncoder()</code> stores a prefix such as <code>{bcrypt}</code>, so you can change algorithms later.`]]},
+ {t:`p`,h:`<h2>Attacks to be able to name and stop</h2>`},
+ {t:`cards`,items:[
+   {h:`SQL injection`,b:`User input becomes part of a query. Fix: prepared statements and JPA parameters, never string concatenation.`},
+   {h:`XSS`,b:`Attacker script runs in a victim's browser. Fix: escape output, a Content-Security-Policy, HttpOnly cookies.`},
+   {h:`CSRF`,b:`A malicious site makes the browser send your cookie to your app. Fix: CSRF token, SameSite cookies.`},
+   {h:`CORS (not an attack)`,b:`A browser rule about which other sites may call your API from JavaScript. It does not protect your server from non-browser clients.`},
+   {h:`Brute force`,b:`Many password guesses. Fix: rate limit, lockout or delays, and multi-factor login.`},
+   {h:`Broken access control`,b:`Top of the OWASP list. The IDOR above is one kind.`}]},
+ {t:`p`,h:`<h2>Between your own services</h2>`},
+ {t:`steps`,items:[
+   [`Edge check.`,` The API gateway validates the token once: signature, expiry, rate limit.`],
+   [`Pass the identity on.`,` Forward the token, or a trimmed internal token, to services behind it.`],
+   [`Each service still authorizes.`,` Do not assume "it came from the gateway, so it is fine". A mistake in one route then exposes everything.`],
+   [`Service to service.`,` Use client credentials tokens, or mutual TLS, so a service proves who it is.`]]},
+ {t:`code`,use:true,cap:`How it is used: a service calling another with a client-credentials token`,code:`# application.yml for the billing service
+spring.security.oauth2.client:
+  registration.orders-client:
+    provider: keycloak
+    authorization-grant-type: client_credentials
+    client-id: billing
+    client-secret: my-secret
+    scope: orders.read
+
+@Bean
+WebClient ordersApi(OAuth2AuthorizedClientManager mgr) {
+    var f = new ServletOAuth2AuthorizedClientExchangeFilterFunction(mgr);
+    f.setDefaultClientRegistrationId("orders-client");    // token is fetched and refreshed for you
+    return WebClient.builder().baseUrl("http://orders").apply(f.oauth2Configuration()).build();
+}`},
+ {t:`mistake`,h:`Putting the client secret in source code or in a mobile app. Anything shipped to a user's device is public. Secrets belong in a vault, environment variables or a secret manager, and public clients (browser, mobile) use PKCE with no secret at all.`},
+ {t:`check`,q:`Why is hashing with SHA-256 and a salt still a poor choice for passwords?`,a:`SHA-256 is designed to be fast, so an attacker with a GPU can try billions of guesses per second. BCrypt, Argon2 and PBKDF2 have a tunable cost, which makes every guess slow. The salt only stops precomputed tables, not fast guessing.`}
+]},
+
+/* ---------- 7 ---------- */
+{id:`lesson-7`,track:`auth`,trackName:`Auth and security`,title:`Auth questions with full answers`,min:40,
+ promise:`Eleven questions as they are asked. Say your answer out loud first, then open it. Each one gives the steps, the trade-offs and the follow-ups.`,
+ blocks:[
+ {t:`qbank`,items:[
+ {n:`Authentication vs authorization`,tag:`Basics`,where:`Opening question in many Java and Spring rounds, including service companies in Pune`,
+  ask:`What is the difference between authentication and authorization? Give an example and name the status codes.`,
+  quality:`Precision in two sentences, an example, and the 401/403 detail.`,
+  steps:[[`Define each.`,` Authentication proves who you are. Authorization decides what you may do.`],[`Order.`,` Authentication first. Authorization needs an identity.`],[`Example.`,` A bank app: login proves you are Riya. Viewing only your own account is authorization.`],[`Codes.`,` 401 when identity is missing or invalid. 403 when identity is known but access is denied.`]],
+  trade:`None really. The depth comes from the follow-up: where does each happen in Spring? Authentication in a filter, authorization in the AuthorizationFilter and in method security.`,
+  follow:`Where are roles stored? What is the SecurityContext? What does 404 instead of 403 hide?`},
+ {n:`Session or JWT: which and why`,tag:`Design`,where:`Asked in nearly every microservices and security round`,
+  ask:`You are building a web app and a mobile app on a Spring Boot backend with many services. Sessions or JWT?`,
+  quality:`A reasoned choice, not a slogan. Name the revocation problem and the scaling problem.`,
+  steps:[[`State the need.`,` Mobile clients and many services push toward stateless tokens.`],[`Choose.`,` Short-lived JWT access token plus a server-side refresh token.`],[`Name the cost.`,` Access tokens cannot be revoked instantly. Mitigate with short expiry, refresh rotation and a denylist for emergencies.`],[`Browser case.`,` Keep the token in an HttpOnly Secure SameSite cookie, and add CSRF protection.`]],
+  trade:`Sessions: easy revocation, but a shared store. JWT: no store, but harder to revoke and the payload is readable.`,
+  follow:`Where do you store the token? How does refresh rotation work? What if the refresh token is stolen?`},
+ {n:`How do you revoke a JWT?`,tag:`Trap`,where:`Called out repeatedly in interview write-ups as the question that exposes shallow JWT knowledge`,
+  ask:`A user's token was stolen. How do you stop it working before it expires?`,
+  quality:`Admit that pure JWT cannot be revoked, then give layered mitigations.`,
+  steps:[[`Be honest.`,` A signed token is valid until exp unless you add state.`],[`Prevent.`,` Short expiry, so the window is small.`],[`React.`,` Add its <code>jti</code> to a Redis denylist with a TTL equal to the token's remaining life. Every request checks the list.`],[`Reset.`,` Revoke the refresh token. For a wide breach, rotate the signing key.`]],
+  code:{cap:`Denylist check as a small filter`,code:`@Component
+class RevokedTokenFilter extends OncePerRequestFilter {
+    private final StringRedisTemplate redis;
+    RevokedTokenFilter(StringRedisTemplate redis) { this.redis = redis; }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+            throws ServletException, IOException {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof JwtAuthenticationToken t
+                && Boolean.TRUE.equals(redis.hasKey("revoked:" + t.getToken().getId()))) {
+            res.sendError(401, "token revoked");
+            return;
+        }
+        chain.doFilter(req, res);
+    }
+}`,use:`// User clicks "log out everywhere" or support flags the account:
+redis.opsForValue().set("revoked:" + jti, "1", Duration.ofMinutes(remainingMinutes));
+// The next request carrying that token is refused with 401.`},
+  trade:`The denylist brings back a lookup on each request, though it is tiny and fast. You trade a little statelessness for control.`,
+  follow:`Why set a TTL on the entry? What about refresh token reuse detection? Would opaque tokens fit better?`},
+ {n:`Explain the OAuth2 authorization code flow with PKCE`,tag:`OAuth2`,where:`Standard for Spring Security, Keycloak and Okta based roles`,
+  ask:`Walk me through "Login with Google". Which party does what?`,
+  quality:`Name the four roles, the order of the steps, and say why the code is swapped instead of sending the token straight back.`,
+  steps:[[`Roles.`,` User, client app, authorization server, resource server.`],[`Redirect.`,` Client sends the browser to the auth server with a code challenge.`],[`Consent.`,` User logs in at the auth server. The client never sees the password.`],[`Code.`,` The browser is redirected back with a one-time code.`],[`Swap.`,` The client sends code plus verifier directly to the token endpoint and gets tokens. Because this is a back-channel call, tokens never pass through the browser URL.`]],
+  trade:`More round trips than a plain login. In return the password stays at one place and access is scoped and revocable.`,
+  follow:`What does PKCE defend against? Why is implicit flow discouraged? What is the difference between access token and ID token?`},
+ {n:`OAuth2 versus OpenID Connect`,tag:`OAuth2`,where:`Common follow-up to the flow question`,
+  ask:`Is OAuth2 an authentication protocol?`,
+  quality:`A clear no, then what OIDC adds.`,
+  steps:[[`OAuth2.`,` Authorization: grants an app limited access to resources.`],[`Gap.`,` An access token does not have to say who the user is, or even be readable by the client.`],[`OIDC.`,` Adds the <code>openid</code> scope, an <b>ID token</b> (a JWT with the user's identity), and a standard userinfo endpoint.`],[`Result.`,` "Login with Google" is OIDC. "Let this app read my calendar" is plain OAuth2.`]],
+  trade:`OIDC needs a provider that supports it. Almost all do.`,
+  follow:`What claims are in an ID token? What is the nonce for? Where do you validate the ID token?`},
+ {n:`Secure a Spring Boot REST API with JWT`,tag:`Spring`,where:`Very common coding-discussion question`,
+  ask:`Show how you would protect a REST API so that only valid tokens get in and only admins can reach /admin.`,
+  quality:`Modern config (SecurityFilterChain), stateless, role mapping, and knowing what Spring does for you.`,
+  steps:[[`Dependencies.`,` <code>spring-boot-starter-oauth2-resource-server</code>.`],[`Point at the issuer.`,` Set <code>issuer-uri</code>. Spring fetches the keys and validates signature, exp and iss.`],[`Chain bean.`,` Stateless sessions, permit public paths, role rules, <code>oauth2ResourceServer(jwt)</code>.`],[`Map roles.`,` Convert the <code>roles</code> claim into <code>ROLE_</code> authorities.`],[`Method rules.`,` Add <code>@PreAuthorize</code> for finer checks.`]],
+  code:{cap:`Mapping a roles claim to authorities`,code:`@Bean
+JwtAuthenticationConverter jwtAuthConverter() {
+    var grants = new JwtGrantedAuthoritiesConverter();
+    grants.setAuthoritiesClaimName("roles");
+    grants.setAuthorityPrefix("ROLE_");
+    var conv = new JwtAuthenticationConverter();
+    conv.setJwtGrantedAuthoritiesConverter(grants);
+    return conv;
+}
+// then: .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(jwtAuthConverter())))`,use:`// With the converter in place, this now works for a token with roles: ["ADMIN"]
+.requestMatchers("/admin/**").hasRole("ADMIN")`},
+  trade:`Trusting an external auth server means you depend on it being up. Spring caches its keys, so brief outages are survivable.`,
+  follow:`What if you must support two issuers? How do you test secured endpoints? (<code>@WithMockUser</code> or the <code>jwt()</code> request post-processor.)`},
+ {n:`How does the Spring Security filter chain work?`,tag:`Spring`,where:`Asked to test depth beyond configuration`,
+  ask:`What happens to a request from the moment it reaches the server until your controller runs?`,
+  quality:`Names the pieces in order, and explains where authentication and authorization happen.`,
+  steps:[[`Entry.`,` A servlet filter, <code>DelegatingFilterProxy</code>, hands over to <code>FilterChainProxy</code>.`],[`Pick a chain.`,` <code>FilterChainProxy</code> chooses the first <code>SecurityFilterChain</code> whose matcher fits the request.`],[`Run the filters.`,` CORS, CSRF, then the authentication filter (bearer token, form login, basic).`],[`Authenticate.`,` The filter produces an <code>Authentication</code> via <code>AuthenticationManager</code> and stores it in <code>SecurityContext</code>.`],[`Authorize.`,` <code>AuthorizationFilter</code> checks the rules. Failure becomes 401 or 403 through <code>ExceptionTranslationFilter</code>.`],[`Controller.`,` Method security can add checks around your service methods.`]],
+  trade:`A long chain is powerful but harder to debug. Turn on <code>logging.level.org.springframework.security=DEBUG</code> to see which filter acted.`,
+  follow:`How do you add a custom filter? Why is the SecurityContext thread-bound? How do you support two chains, one for /api and one for the web UI?`},
+ {n:`Store passwords correctly`,tag:`Security`,where:`A staple in banking and fintech interviews`,
+  ask:`How should an application store user passwords? What would you do if the database leaks?`,
+  quality:`One-way, salted, slow hashing, and the plan for a breach.`,
+  steps:[[`Hash, do not encrypt.`,` Nobody should be able to recover the password.`],[`Slow and salted.`,` BCrypt or Argon2, with a per-user salt and a tuned cost.`],[`Upgrade path.`,` Delegating encoder keeps an algorithm tag, so you can rehash at next login.`],[`If leaked.`,` Hashes make mass cracking costly. Force resets, invalidate sessions and tokens, notify, and offer multi-factor login.`]],
+  trade:`Higher cost means slower logins and higher CPU. Tune it to about 100 to 300 ms on your hardware.`,
+  follow:`What is a pepper? Why not SHA-256? How do you add MFA?`},
+ {n:`CSRF, XSS and CORS`,tag:`Security`,where:`Frequent in full-stack and security-aware backend rounds`,
+  ask:`Explain CSRF, XSS and CORS. When do you need CSRF protection?`,
+  quality:`Three crisp definitions, and the link between cookies and CSRF.`,
+  steps:[[`CSRF.`,` A malicious site triggers a request to your app, and the browser attaches your cookie. Fix: CSRF token and SameSite cookies.`],[`When needed.`,` Whenever authentication rides on cookies the browser sends automatically. Not needed for APIs that read a bearer header.`],[`XSS.`,` Attacker script runs in the user's page. Fix: output escaping, CSP, HttpOnly cookies.`],[`CORS.`,` A browser policy on cross-origin JavaScript calls. Configure allowed origins explicitly. It is not server-side protection.`]],
+  trade:`Strict SameSite and CSP can break embedded or cross-site use. Test those flows.`,
+  follow:`Why is <code>Access-Control-Allow-Origin: *</code> with credentials rejected? Where does a pre-flight request come from?`},
+ {n:`Secure communication between microservices`,tag:`Microservices`,where:`Asked after any microservices design`,
+  ask:`Ten services talk to each other. How do you make sure only the right callers get through?`,
+  quality:`Layered: edge, identity propagation, per-service checks, service identity.`,
+  steps:[[`Gateway.`,` Validate tokens, apply rate limits, strip unsafe headers.`],[`Propagate the user.`,` Forward the JWT so each service knows who the user is.`],[`Service identity.`,` Client-credentials tokens or mutual TLS for calls with no user.`],[`Authorize per service.`,` Each service checks scopes and ownership. The gateway is not the only guard.`],[`Network.`,` Private network, and a service mesh policy if you run one.`]],
+  trade:`More checks add small latency and setup. Skipping them means one breach opens everything.`,
+  follow:`What is token exchange? How do you rotate secrets? How do you audit who called what?`},
+ {n:`Role-based access in a multi-tenant app`,tag:`Design`,where:`Typical in SaaS and fintech product companies`,
+  ask:`Customers (tenants) share one system. How do you make sure tenant A never sees tenant B's data?`,
+  quality:`Tenant id comes from the verified token, and is enforced in the data layer, not only in the controller.`,
+  steps:[[`Source of truth.`,` Take the tenant id from the verified token, never from a request parameter.`],[`Carry it.`,` Keep it in a request-scoped holder.`],[`Enforce at the data layer.`,` Every query includes the tenant id. Hibernate filters or row-level security in the database remove the chance of forgetting.`],[`Roles inside a tenant.`,` Roles are per tenant: a user can be ADMIN in one and VIEWER in another.`],[`Test.`,` A test that logs in as tenant A and tries tenant B's ids must return 404.`]],
+  trade:`Shared schema is cheap but one bug leaks data. Separate schemas or databases cost more and isolate better.`,
+  follow:`How do you handle a support user who may cross tenants? How do you run migrations across tenants?`}
+ ]},
+ {t:`p`,h:`<h2>Where this came from</h2><p>Topics and questions were gathered from current interview write-ups on authentication, OAuth2 and Spring Security. They are general rather than Pune-specific, because I could not find a reliable Pune-only list. They match what mid-level and senior backend roles in India commonly test.</p>`},
+ {t:`links`,items:[
+  [`techprep: 131 Authentication and Authorization interview questions`,`https://www.techprep.app/blog/authentication-and-authorization-interview-questions`],
+  [`techinterview.org: Why interviewers keep asking if you can revoke a JWT`,`https://www.techinterview.org/post/3233477260/revoke-jwt-oauth-interview-questions/`],
+  [`prachub: OAuth, OIDC, JWT and sessions`,`https://prachub.com/resources/authentication-and-authorization-interview-questions-oauth-oidc-jwt-and-sessions`],
+  [`Educative: Top 30 Spring Security interview questions`,`https://www.educative.io/blog/spring-java-interview-questions-practice`],
+  [`GeeksforGeeks: Spring Security interview questions`,`https://www.geeksforgeeks.org/spring-security-interview-questions/amp/`],
+  [`Interview Kickstart: Spring Security interview questions`,`https://interviewkickstart.com/blog/interview-questions/spring-security-interview-questions`]]}
+]}
+
+];
+
+/* ================= RENDER ================= */
+var STAGES=[
+ {l:'1 server',hurt:'Nothing yet.',fix:'One app server and one database is a perfectly good start. Spend your effort on a clean data model and the right indexes.',cost:'None, and that is the point. Every extra part is something to run and debug.'},
+ {l:'Slow queries',hurt:'Pages slow down because the app and database share one machine, and some queries scan whole tables.',fix:'Add indexes. Move the database to its own machine. Use a bigger machine if needed.',cost:'A bigger machine has a ceiling, and one failure still takes everything down.'},
+ {l:'Read-heavy',hurt:'The database is busy answering the same read questions again and again.',fix:'Add a cache for popular data. Add read replicas (copies for reading).',cost:'Data can be slightly stale. You now have to decide when to refresh the cache.'},
+ {l:'One server is not enough',hurt:'One app server cannot take the traffic, and if it dies, the site is down.',fix:'Run several identical app servers behind a load balancer. Keep them stateless, so any server can handle any request.',cost:'You must move user sessions out of server memory, and handle deployments carefully.'},
+ {l:'Slow work blocks users',hurt:'Sending emails or making reports makes users wait. Spikes of traffic can overwhelm the database.',fix:'Put slow work on a queue and let workers process it in the background.',cost:'Duplicates can happen, so workers must be safe to run twice. Users see "pending" for a while.'},
+ {l:'Data too big',hurt:'One database cannot hold all the data or take all the writes.',fix:'Split the data across several databases by a key, such as user id. This is sharding.',cost:'Queries across shards are hard, and a popular key can overload one shard.'},
+ {l:'Global users',hurt:'Users far from your servers get slow responses, and one data-center outage takes everyone down.',fix:'Serve static files from a CDN. Run in more than one region and route users to the nearest one.',cost:'Data in different regions can briefly disagree, and the bill grows a lot.'}
+];
+
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+
+function fmt(n){
+  if(n>=1e9)return (n/1e9).toFixed(1)+' B';
+  if(n>=1e6)return (n/1e6).toFixed(1)+' M';
+  if(n>=1e3)return (n/1e3).toFixed(1)+' K';
+  return n<10?n.toFixed(1):String(Math.round(n));
+}
+function fmtBytes(n){var u=['B','KB','MB','GB','TB','PB'],i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(1):Math.round(n))+' '+u[i]}
+
+function renderBlock(b,host){
+  var n;
+  switch(b.t){
+  case 'p': host.appendChild(el('div','sec',b.h));break;
+  case 'plain': n=el('div','box');n.appendChild(el('div','label','In plain words'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'analogy': n=el('div','box plain');n.appendChild(el('div','label','Picture it'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'mistake': n=el('div','box mistake');n.appendChild(el('div','label','Common mistake'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'remember': n=el('div','box remember');n.appendChild(el('div','label','Remember this'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'steps':
+    n=el('ol','steps');
+    b.items.forEach(function(s){var li=el('li',null,'<div><b>'+s[0]+'</b>'+s[1]+'</div>');n.appendChild(li)});
+    host.appendChild(n);break;
+  case 'two':
+    n=el('div','two');
+    [b.a,b.b].forEach(function(x){n.appendChild(el('div',null,'<div class="h">'+x.h+'</div><p>'+x.b+'</p>'))});
+    host.appendChild(n);break;
+  case 'cards':
+    n=el('div','cards');
+    b.items.forEach(function(c){
+      n.appendChild(el('div','card','<h3>'+c.h+'</h3>'+(c.pic?'<div class="pic">'+c.pic+'</div>':'')+'<p>'+c.b+'</p>'+(c.small?'<p class="small">'+c.small+'</p>':'')));
+    });
+    host.appendChild(n);break;
+  case 'code':
+    n=el('div','sec');
+    var cap=el('div','cap'+(b.bad?' bad':'')+(b.good?' good':''),b.cap||'');
+    if(b.use)cap.className+=' use';
+    var pre=document.createElement('pre');pre.textContent=b.code;if(b.use)pre.className='use';
+    n.appendChild(cap);n.appendChild(pre);host.appendChild(n);break;
+  case 'check':
+    n=el('div','check');
+    n.appendChild(el('div','label','Check yourself'));
+    n.appendChild(el('p','q',b.q));
+    var btn=el('button','reveal','Think, then show the answer');btn.type='button';
+    var ans=el('div','ans',b.a);ans.hidden=true;
+    btn.addEventListener('click',function(){ans.hidden=!ans.hidden;btn.textContent=ans.hidden?'Think, then show the answer':'Hide the answer'});
+    n.appendChild(btn);n.appendChild(ans);host.appendChild(n);break;
+  case 'qbank': host.appendChild(buildQbank(b.items));break;
+  case 'diagram': host.appendChild(buildDiagram(b));break;
+  case 'links':
+    n=el('div','links');
+    b.items.forEach(function(x){var a=document.createElement('a');a.href=x[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=x[0];n.appendChild(a)});
+    host.appendChild(n);break;
+  case 'calc': host.appendChild(buildCalc());break;
+  case 'stages': host.appendChild(buildStages());break;
+  case 'drill': host.appendChild(buildDrill());break;
+  }
+}
+
+function buildCalc(){
+  var box=el('div','check');
+  box.appendChild(el('div','label','Try it'));
+  box.appendChild(el('p',null,'Change the numbers and watch what moves. Start with the example from above.'));
+  box.appendChild(el('div','fields',
+    '<div class="field"><label for="c-dau">Daily users (millions)</label><input id="c-dau" type="number" min="0" step="any" value="10"></div>'+
+    '<div class="field"><label for="c-act">Actions per user per day</label><input id="c-act" type="number" min="0" step="any" value="20"></div>'+
+    '<div class="field"><label for="c-rpw">Reads for every 1 write</label><input id="c-rpw" type="number" min="0" step="any" value="10"></div>'));
+  var out=el('div','out');out.setAttribute('aria-live','polite');box.appendChild(out);
+  var msg=el('div','box');box.appendChild(msg);
+  function num(id){var v=parseFloat(box.querySelector(id).value);return isFinite(v)&&v>=0?v:0}
+  function run(){
+    var dau=num('#c-dau')*1e6,act=num('#c-act'),rpw=num('#c-rpw');
+    var day=dau*act,avg=day/86400,pk=avg*3,w=pk/(rpw+1),r=pk-w;
+    var data=day/(rpw+1)*1000*365;
+    out.innerHTML=
+      '<div><span>Requests per day</span><b>'+fmt(day)+'</b></div>'+
+      '<div><span>Average per second</span><b>'+fmt(avg)+'</b></div>'+
+      '<div><span>Busy-hour per second (x3)</span><b>'+fmt(pk)+'</b></div>'+
+      '<div><span>Reads per second at peak</span><b>'+fmt(r)+'</b></div>'+
+      '<div><span>Writes per second at peak</span><b>'+fmt(w)+'</b></div>'+
+      '<div><span>New data per year (1 KB per write)</span><b>'+fmtBytes(data)+'</b></div>';
+    var m;
+    if(r<1000&&w<500)m='<b>What this means:</b> one well-tuned database can handle this. Keep it simple.';
+    else if(r<10000)m='<b>What this means:</b> reads are the pressure. Add a cache and maybe read replicas.';
+    else m='<b>What this means:</b> reads are very high. You need a cache layer, and likely a CDN for static files.';
+    if(w>=5000)m+=' Writes are high too, so think about a queue and splitting the data.';
+    msg.innerHTML='<p>'+m+'</p>';
+  }
+  box.addEventListener('input',run);run();
+  return box;
+}
+
+function buildStages(){
+  var wrap=el('div','sec'),sel=2;
+  var row=el('div','row');wrap.appendChild(row);
+  var panel=el('div','check');panel.setAttribute('aria-live','polite');wrap.appendChild(panel);
+  function draw(){
+    Array.prototype.forEach.call(row.children,function(b,i){b.setAttribute('aria-pressed',i===sel?'true':'false')});
+    var s=STAGES[sel];
+    panel.innerHTML='<div><div class="label">What hurts</div><p>'+s.hurt+'</p></div>'+
+      '<div><div class="label">The fix</div><p>'+s.fix+'</p></div>'+
+      '<div><div class="label">What the fix costs</div><p>'+s.cost+'</p></div>';
+  }
+  STAGES.forEach(function(s,i){
+    var b=el('button','stage',s.l);b.type='button';
+    b.addEventListener('click',function(){sel=i;draw()});row.appendChild(b);
+  });
+  draw();return wrap;
+}
+
+function buildDiagram(b){
+  var spec=b.d,NS='http://www.w3.org/2000/svg';
+  function s(tag,attrs,text){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+  var W=spec.w||420,byId={};
+  spec.nodes.forEach(function(n){
+    var hdr=n.k==='state'?34:(n.k==='note'?0:(n.s?38:28));
+    var ml=n.m?n.m.length:0;
+    if(n.k==='state')n.h=34;
+    else if(n.k==='note')n.h=ml*14+14;
+    else n.h=hdr+(ml?10+14*ml:0);
+    n.hdr=hdr;byId[n.id]=n;
+  });
+  var H=0;spec.nodes.forEach(function(n){H=Math.max(H,n.y+n.h)});H+=14;
+  var svg=s('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':spec.alt||''});
+  var defs=s('defs',{});
+  function marker(id,w,h,rx,ry,child){
+    var m=s('marker',{id:id,viewBox:'0 0 '+w+' '+h,refX:rx,refY:ry,markerWidth:w,markerHeight:h,markerUnits:'userSpaceOnUse',orient:'auto'});
+    m.appendChild(child);defs.appendChild(m);
+  }
+  var uid='m'+Math.floor(Math.random()*1e6);
+  marker(uid+'t',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-tri'}));
+  marker(uid+'o',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11','class':'mk-open'}));
+  marker(uid+'f',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-fill'}));
+  marker(uid+'d',14,12,0,6,s('path',{d:'M1,6 L7,1 L13,6 L7,11 z','class':'mk-tri'}));
+  svg.appendChild(defs);
+  function clip(n,tx,ty){
+    var cx=n.x+n.w/2,cy=n.y+n.h/2,dx=tx-cx,dy=ty-cy;
+    if(dx===0&&dy===0)return [cx,cy];
+    var t=Math.min(dx!==0?(n.w/2)/Math.abs(dx):1e9,dy!==0?(n.h/2)/Math.abs(dy):1e9);
+    return [cx+dx*t,cy+dy*t];
+  }
+  spec.edges.forEach(function(e){
+    var A=byId[e.a],B=byId[e.b];
+    var ax=A.x+A.w/2,ay=A.y+A.h/2,bx=B.x+B.w/2,by=B.y+B.h/2;
+    var dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy)||1,o=e.o||0;
+    var nx=-dy/len*o,ny=dx/len*o;
+    var p1=clip(A,bx+nx,by+ny),p2=clip(B,ax+nx,ay+ny);
+    p1=[p1[0]+nx,p1[1]+ny];p2=[p2[0]+nx,p2[1]+ny];
+    var k=e.k||'arrow',dash=(k==='implements'||k==='uses');
+    var line=s('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],'class':'dg-e'+(dash?' dash':'')});
+    if(k==='extends'||k==='implements')line.setAttribute('marker-end','url(#'+uid+'t)');
+    else if(k==='uses')line.setAttribute('marker-end','url(#'+uid+'o)');
+    else if(k==='has'){line.setAttribute('marker-start','url(#'+uid+'d)');line.setAttribute('marker-end','url(#'+uid+'o)')}
+    else line.setAttribute('marker-end','url(#'+uid+'f)');
+    svg.appendChild(line);
+    if(e.l){
+      var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2,lw=e.l.length*5.6+10;
+      svg.appendChild(s('rect',{x:mx-lw/2,y:my-8,width:lw,height:15,rx:3,'class':'dg-lb'}));
+      svg.appendChild(s('text',{x:mx,y:my+3.5,'class':'dg-l'},e.l));
+    }
+  });
+  spec.nodes.forEach(function(n){
+    var cls=n.k==='iface'?'dg-if':(n.k==='state'?'dg-st':(n.k==='note'?'dg-note':'dg-box'));
+    svg.appendChild(s('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:n.k==='state'?17:6,'class':cls}));
+    if(n.k==='note'){
+      (n.m||[]).forEach(function(l,i){svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+16+i*14,'class':'dg-n'},l))});
+      return;
+    }
+    if(n.s)svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+15,'class':'dg-s'},'«'+n.s+'»'));
+    svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+(n.k==='state'?22:(n.s?31:19)),'class':'dg-t'},n.t));
+    if(n.m&&n.m.length){
+      svg.appendChild(s('line',{x1:n.x,y1:n.y+n.hdr,x2:n.x+n.w,y2:n.y+n.hdr,'class':'dg-sep'}));
+      n.m.forEach(function(l,i){svg.appendChild(s('text',{x:n.x+8,y:n.y+n.hdr+6+(i+1)*14-3,'class':'dg-m'},l))});
+    }
+  });
+  var wrap=el('div','diagram');
+  wrap.appendChild(svg);
+  if(b.cap)wrap.appendChild(el('p','dcap',b.cap));
+  return wrap;
+}
+
+function buildQbank(items){
+  var wrap=el('div');
+  items.forEach(function(q){
+    var d=document.createElement('details');d.className='q';
+    var s=document.createElement('summary');
+    s.innerHTML='<span class="qleft"><span>'+q.n+'</span><span class="pill">'+q.tag+'</span></span>';
+    d.appendChild(s);
+    var b=el('div','qbody');
+    b.appendChild(el('p','where','<b>Seen in:</b> '+q.where));
+    b.appendChild(el('div','qsec','<div class="label">The question</div><p>'+q.ask+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">What matters most</div><p>'+q.quality+'</p>'));
+    var st=el('div','qsec','<div class="label">Walk through it</div>');
+    var ol=el('ol','steps');
+    q.steps.forEach(function(x){ol.appendChild(el('li',null,'<div><b>'+x[0]+'</b>'+x[1]+'</div>'))});
+    st.appendChild(ol);b.appendChild(st);
+    if(q.code){
+      var c=el('div','qsec');
+      c.appendChild(el('div','cap',q.code.cap));
+      var pre=document.createElement('pre');pre.textContent=q.code.code;c.appendChild(pre);
+      if(q.code.use){
+        c.appendChild(el('div','cap use','How it is used'));
+        var p2=document.createElement('pre');p2.className='use';p2.textContent=q.code.use;c.appendChild(p2);
+      }
+      b.appendChild(c);
+    }
+    b.appendChild(el('div','qsec','<div class="label">Trade-offs to say out loud</div><p>'+q.trade+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">Follow-ups to expect</div><p>'+q.follow+'</p>'));
+    d.appendChild(b);wrap.appendChild(d);
+  });
+  return wrap;
+}
+
+var P={lld:['Design a parking lot','Design an elevator system','Design Splitwise (shared expenses)','Design a library system','Design a vending machine','Design an LRU cache','Design a chess game','Design an ATM','Design a movie ticket booking system','Design a logging framework'],
+ hld:['Design a URL shortener','Design a news feed','Design a chat application','Design a video streaming service','Design a ride-hailing app','Design a notification system','Design a web crawler','Design search autocomplete','Design a payment system','Design a ticket booking system']};
+var timerState={remaining:1200,running:false,endAt:0,id:null};
+function buildDrill(){
+  var box=el('div','check'),kind='lld',cur='';
+  box.appendChild(el('div','label','Today\'s drill'));
+  var pill=el('span','pill','LLD');var pw=el('div');pw.appendChild(pill);box.appendChild(pw);
+  var prompt=el('p',null,'');prompt.style.cssText='font:600 1.2rem/1.4 var(--font-display)';box.appendChild(prompt);
+  var r1=el('div','row');
+  var bl=el('button','reveal','New LLD prompt'),bh=el('button','reveal','New HLD prompt');bl.type=bh.type='button';
+  r1.appendChild(bl);r1.appendChild(bh);box.appendChild(r1);
+  var time=el('div','timer','20:00');box.appendChild(time);
+  var phase=el('p',null,'Ready when you are.');box.appendChild(phase);
+  var r2=el('div','row');
+  var st=el('button','btn','Start'),rs=el('button','btn ghost','Reset');st.type=rs.type='button';
+  r2.appendChild(st);r2.appendChild(rs);box.appendChild(r2);
+  function pick(k){kind=k;var l=P[k],p=cur;while(p===cur)p=l[Math.floor(Math.random()*l.length)];cur=p;prompt.textContent=p;pill.textContent=k.toUpperCase()}
+  function render(){
+    var rem=timerState.remaining,m=Math.floor(rem/60),s=rem%60;
+    time.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    var el_=1200-rem,txt;
+    if(rem<=0)txt='Time. Now write one line: what did I skip or hand-wave?';
+    else if(!timerState.running&&el_===0)txt='Ready when you are. Talk out loud.';
+    else if(el_<300)txt='Clarify: ask questions, pick three must-haves and one key quality.';
+    else if(el_<900)txt=kind==='lld'?'Model: nouns, verbs, who owns what, what will change.':'Model: numbers, the two actions, smallest design, what breaks first.';
+    else txt='Stress and trade: two users at once, a new requirement, then the template sentence.';
+    phase.textContent=txt;
+    st.textContent=timerState.running?'Pause':(rem<=0||rem===1200?'Start':'Resume');
+  }
+  function tick(){
+    timerState.remaining=Math.max(0,Math.ceil((timerState.endAt-Date.now())/1000));
+    if(timerState.remaining<=0){timerState.running=false;clearInterval(timerState.id);timerState.id=null}
+    render();
+  }
+  st.addEventListener('click',function(){
+    if(timerState.running){timerState.running=false;clearInterval(timerState.id);timerState.id=null;render();return}
+    if(timerState.remaining<=0)timerState.remaining=1200;
+    timerState.running=true;timerState.endAt=Date.now()+timerState.remaining*1000;
+    timerState.id=setInterval(tick,500);render();
+  });
+  rs.addEventListener('click',function(){timerState.running=false;clearInterval(timerState.id);timerState.id=null;timerState.remaining=1200;render()});
+  bl.addEventListener('click',function(){pick('lld');render()});
+  bh.addEventListener('click',function(){pick('hld');render()});
+  pick('lld');render();
+  return box;
+}
+
+/* ================= PAGE ================= */
+var cur=0;
+function idx(){
+  var h=(location.hash||'').replace('#','');
+  for(var i=0;i<L.length;i++)if(L[i].id===h)return i;
+  return 0;
+}
+function drawList(){
+  var host=$('#list');host.innerHTML='';
+  var last='';
+  L.forEach(function(l,i){
+    if(l.trackName!==last){last=l.trackName;host.appendChild(el('h3',null,l.trackName))}
+    var a=document.createElement('a');a.href='#'+l.id;
+    if(i===cur)a.setAttribute('aria-current','page');
+    a.innerHTML='<span class="n">'+(i+1)+'</span><span>'+l.title+'</span><span class="'+(done[l.id]?'tick':'min')+'">'+(done[l.id]?'&#10003; done':l.min+' min')+'</span>';
+    a.addEventListener('click',function(){closeList()});
+    host.appendChild(a);
+  });
+}
+function closeList(){$('#list').classList.remove('open');$('#menu-btn').setAttribute('aria-expanded','false')}
+$('#menu-btn').addEventListener('click',function(){
+  var o=$('#list').classList.toggle('open');this.setAttribute('aria-expanded',o?'true':'false');
+});
+function meter(){
+  var n=0;L.forEach(function(l){if(done[l.id])n++});
+  $('#meter').style.width=Math.round(n/L.length*100)+'%';
+}
+function draw(){
+  cur=idx();
+  var l=L[cur];
+  document.body.setAttribute('data-track',l.track);
+  $('#where').textContent='Lesson '+(cur+1)+' of '+L.length+' · '+l.trackName;
+  var host=$('#lesson');host.innerHTML='';
+  var head=el('div');
+  head.appendChild(el('div','kicker',l.trackName+' · about '+l.min+' minutes'));
+  head.appendChild(el('h1',null,l.title));
+  head.appendChild(el('p','promise',l.promise));
+  host.appendChild(head);
+  l.blocks.forEach(function(b){renderBlock(b,host)});
+  var dr=el('label','done-row');
+  var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!done[l.id];
+  cb.addEventListener('change',function(){if(cb.checked)done[l.id]=1;else delete done[l.id];save();meter();drawList()});
+  dr.appendChild(cb);dr.appendChild(el('span',null,'I finished this lesson'));
+  host.appendChild(dr);
+  var nav=el('div','nav');
+  var pv=el('button','btn ghost','Previous');pv.type='button';pv.disabled=cur===0;
+  var nx=el('button','btn',cur===L.length-1?'Back to lesson 1':'Next lesson');nx.type='button';
+  pv.addEventListener('click',function(){if(cur>0)location.hash=L[cur-1].id});
+  nx.addEventListener('click',function(){location.hash=L[cur===L.length-1?0:cur+1].id});
+  nav.appendChild(pv);nav.appendChild(nx);host.appendChild(nav);
+  meter();drawList();
+}
+window.addEventListener('hashchange',function(){draw();window.scrollTo(0,0)});
+draw();
+})();
+</script>

@@ -1,0 +1,933 @@
+<title>Spring Boot Internals Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#EDEBE4; --fg:#1D2530; --muted:#556170; --line:#DAD7CD;
+  --start:#4B3FA8; --lld:#0B6B6A; --hld:#244A8F; --practice:#9A4A12; --bank:#8A2D63; --pat:#3F6B1F;
+  --accent:var(--start);
+  --start-soft:#E7E4F7; --bank-soft:#F6E1EE; --pat-soft:#E3F0D3; --accent-soft:var(--start-soft); --lld-soft:#D9EFED; --hld-soft:#E0E8F8; --practice-soft:#F8E6D6;
+  --good:#17794A; --good-soft:#DCF2E6; --bad:#B3261E; --bad-soft:#FBE2DF; --warn-soft:#FBEBCD; --warn:#8A4B00;
+  --code-bg:#F0EEE7; --on-accent:#FFFFFF;
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+    --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+    --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+    --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+    --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+  --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+  --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+  --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+  --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+}
+body[data-track="start"]{--accent:var(--start);--accent-soft:var(--start-soft)}
+body[data-track="lld"]{--accent:var(--lld);--accent-soft:var(--lld-soft)}
+body[data-track="hld"]{--accent:var(--hld);--accent-soft:var(--hld-soft)}
+body[data-track="practice"]{--accent:var(--practice);--accent-soft:var(--practice-soft)}
+body[data-track="bank"]{--accent:var(--bank);--accent-soft:var(--bank-soft)}
+body[data-track="patterns"]{--accent:var(--pat);--accent-soft:var(--pat-soft)}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.75 var(--font-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;display:flex;align-items:center;gap:12px}
+.bar .where{flex:1;min-width:0;font:500 .85rem var(--font-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.92rem}
+body[data-track="spring"]{--accent:var(--pat);--accent-soft:var(--pat-soft)}
+.homelink{color:var(--accent);text-decoration:none;font-weight:600;font-size:.92rem;padding:8px 4px}
+.meter{height:4px;background:var(--surface-2)}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* lesson list */
+.list{display:none;padding:16px 0 8px}
+.list.open{display:block}
+.list h3{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.list a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--fg);font-size:.98rem}
+.list a:hover{background:var(--surface-2)}
+.list a[aria-current="page"]{background:var(--surface);border:1px solid var(--line)}
+.list .n{font:500 .8rem var(--font-mono);color:var(--muted)}
+.list .tick{font-size:.85rem;color:var(--good)}
+.list .min{font:400 .75rem var(--font-mono);color:var(--muted)}
+
+/* lesson */
+.lesson{padding-top:36px;display:flex;flex-direction:column;gap:28px}
+.kicker{font:600 .78rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lesson h1{font-size:clamp(1.9rem,5vw,2.5rem);font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.promise{color:var(--muted);font-size:1.08rem;margin-top:10px}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font:600 .75rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.sec h2{font-size:1.3rem;font-weight:600}
+.sec p+p{margin-top:2px}
+b,strong{font-weight:600}
+.box{border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.box.plain{background:var(--surface);border:1px solid var(--line)}
+.box.mistake{background:var(--bad-soft)}
+.box.mistake .label{color:var(--bad)}
+.box.remember{background:var(--warn-soft)}
+.box.remember .label{color:var(--warn)}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px}
+ol.steps li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);font:600 .85rem var(--font-mono);display:grid;place-items:center;margin-top:2px}
+ol.steps b{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;min-width:0}
+.two .h{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{font-size:1.05rem}
+.card .pic{color:var(--accent);font-weight:600;font-size:.95rem}
+.card .small{color:var(--muted);font-size:.93rem}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 .84rem/1.6 var(--font-mono);tab-size:2}
+.cap{font:500 .75rem var(--font-mono);color:var(--muted);margin-bottom:-4px}
+.cap.bad{color:var(--bad)} .cap.good{color:var(--good)}
+.cap.use{color:var(--accent);font-weight:600}
+pre.use{border-left:3px solid var(--accent)}
+.check{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.check .q{font-weight:600}
+.reveal{align-self:flex-start;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.ans{background:var(--good-soft);border-radius:10px;padding:12px 14px}
+.ans[hidden]{display:none}
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px 20px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.done-row{display:flex;align-items:center;gap:10px}
+.done-row input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* calculator + timer */
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.85rem;color:var(--muted)}
+.field input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:500 1rem var(--font-mono)}
+.out{display:flex;flex-direction:column}
+.out div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.out span{color:var(--muted);font-size:.95rem}
+.out b{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.timer{font:500 clamp(2.6rem,9vw,3.6rem)/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.stage{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 .85rem var(--font-mono)}
+.stage[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+code{font:500 .86em var(--font-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre code{padding:0;background:none}
+
+/* diagrams */
+.diagram{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.diagram svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.diagram .dcap{font-size:.88rem;color:var(--muted);text-align:center}
+.dg-box{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.2}
+.dg-if{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-st{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-note{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-dasharray:4 3}
+.dg-sep{stroke:var(--muted);stroke-width:1;opacity:.6}
+.dg-t{font:600 12.5px var(--font-display);fill:var(--fg);text-anchor:middle}
+.dg-s{font:italic 400 10px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-m{font:400 10.5px var(--font-mono);fill:var(--fg)}
+.dg-n{font:400 10.5px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-e{stroke:var(--muted);stroke-width:1.4;fill:none}
+.dg-e.dash{stroke-dasharray:5 4}
+.dg-lb{fill:var(--surface)}
+.dg-l{font:500 10.5px var(--font-body);fill:var(--fg);text-anchor:middle}
+.mk-tri{fill:var(--surface);stroke:var(--muted);stroke-width:1.2}
+.mk-open{fill:none;stroke:var(--muted);stroke-width:1.4}
+.mk-fill{fill:var(--muted);stroke:none}
+/* question bank */
+details.q{border:1px solid var(--line);background:var(--surface);border-radius:14px}
+details.q+details.q{margin-top:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 1.05rem/1.3 var(--font-display)}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"+";font:500 1.3rem var(--font-mono);color:var(--accent);flex:none}
+details.q[open]>summary::after{content:"\2212"}
+details.q[open]>summary{border-bottom:1px solid var(--line)}
+.qleft{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.qbody{padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.qbody .where{font-size:.9rem;color:var(--muted)}
+.qsec{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qlist{margin:0;padding-left:20px}
+.qlist li+li{margin-top:6px}
+.links{display:flex;flex-direction:column;gap:8px}
+.links a{color:var(--accent);word-break:break-word}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <a class="homelink" href="index.html">Home</a>
+    <span class="where" id="where">Lesson 1</span>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="list">All lessons</button>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <nav class="list" id="list" aria-label="Lessons"></nav>
+  <main class="lesson" id="lesson"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var KEY='spring-course-v1';
+var done={};
+try{done=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){done={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(done))}catch(e){}}
+
+/* ================= CONTENT ================= */
+/* block types: p, plain, analogy, steps, two, cards, code, mistake, check, remember, calc, drill, stages */
+var L=[
+/* ---------- 1 ---------- */
+{id:`lesson-1`,track:`spring`,trackName:`Spring Boot internals`,title:`Spring in one picture, and what gets asked`,min:9,
+ promise:`You have used Spring for years. Interviewers now ask how it works underneath. Start with the one idea everything else hangs on.`,
+ blocks:[
+ {t:`plain`,h:`Spring is a <b>container that builds your objects and wires them together</b>. You describe the classes (beans). Spring creates them, hands each one what it needs (<b>dependency injection</b>), and manages their life. You stop writing <code>new</code> for your services.`},
+ {t:`analogy`,h:`A film set. The director (Spring) hires the actors, gives each one their props, and calls "action". An actor never goes shopping for their own props. That is inversion of control: you do not fetch your dependencies, they are delivered.`},
+ {t:`diagram`,cap:`Spring reads your classes and settings, builds the beans, and gives you a ready, wired application.`,d:{w:420,alt:`Classes and configuration flow into the ApplicationContext which produces wired beans`,nodes:[
+   {id:`in`,t:`Your classes + config`,x:6,y:30,w:140,m:[`@Component`,`@Bean`,`application.yml`]},
+   {id:`cx`,t:`ApplicationContext`,s:`the container`,x:170,y:24,w:140,m:[`creates`,`injects`,`manages`]},
+   {id:`bn`,t:`Ready beans`,x:332,y:36,w:82,m:[`wired`,`proxied`]}],
+  edges:[{a:`in`,b:`cx`},{a:`cx`,b:`bn`}]}},
+ {t:`p`,h:`<h2>What the guides say gets asked</h2>`},
+ {t:`cards`,items:[
+   {h:`Core`,b:`IoC and DI, bean scopes, bean lifecycle, circular dependencies, @Component vs @Bean.`},
+   {h:`Spring Boot`,b:`How auto-configuration works, starters, properties and profiles, Actuator.`},
+   {h:`Proxies`,b:`How @Transactional and @Async actually work, and why they sometimes silently do nothing.`},
+   {h:`Web`,b:`The DispatcherServlet flow, validation, exception handling, filters versus interceptors.`},
+   {h:`Production`,b:`Testing slices, configuration per environment, health checks, graceful shutdown.`}]},
+ {t:`remember`,h:`Lists of Spring Boot questions for experienced developers keep returning to the same few: <b>auto-configuration, the bean lifecycle, how @Transactional works, circular dependencies and proxy behaviour</b>. Those are lessons 2 to 4.`},
+ {t:`code`,use:true,cap:`The smallest Spring Boot app, and what really happens when it starts`,code:`@SpringBootApplication
+public class ShopApp {
+    public static void main(String[] args) {
+        SpringApplication.run(ShopApp.class, args);
+    }
+}
+// run() does the whole job:
+// 1. Create the ApplicationContext
+// 2. Scan packages for @Component, @Service, @Repository, @Controller
+// 3. Apply auto-configuration (DataSource, Jackson, embedded Tomcat... if on the classpath)
+// 4. Build and wire all beans, apply proxies
+// 5. Start the embedded web server and publish "ready"`},
+ {t:`check`,q:`In one sentence each: what is dependency injection, and what is the difference between <code>BeanFactory</code> and <code>ApplicationContext</code>?`,a:`Dependency injection means a class receives the objects it needs from outside instead of creating them. BeanFactory is the basic container that creates beans on demand. ApplicationContext builds on it and adds events, internationalisation, resource loading, annotation-driven config and eager singleton creation. In practice you always use ApplicationContext.`}
+]},
+
+/* ---------- 2 ---------- */
+{id:`lesson-2`,track:`spring`,trackName:`Spring Boot internals`,title:`Beans: injection, scopes, lifecycle and circular dependencies`,min:17,
+ promise:`The questions that sound basic and are not. Know the lifecycle order and the one scope trap, and you stand out.`,
+ blocks:[
+ {t:`p`,h:`<h2>How to inject: use the constructor</h2>`},
+ {t:`code`,bad:true,cap:`Field injection: hides dependencies and is hard to test`,code:`@Service
+class PaymentService {
+    @Autowired private GatewayClient gateway;   // cannot be final, needs reflection to test
+}`},
+ {t:`code`,good:true,cap:`Constructor injection: the recommended way`,code:`@Service
+class PaymentService {
+    private final GatewayClient gateway;
+    PaymentService(GatewayClient gateway) { this.gateway = gateway; }   // @Autowired optional with one constructor
+}
+// In a unit test, no Spring needed:
+// new PaymentService(mockGateway)`},
+ {t:`cards`,items:[
+   {h:`Why constructor injection`,b:`Fields can be <code>final</code>. Required dependencies are explicit. Objects are never half-built. Tests do not need a container. It also exposes circular dependencies early.`},
+   {h:`Setter injection`,b:`For optional dependencies that can change.`},
+   {h:`@Component vs @Bean`,b:`<code>@Component</code> (and its forms <code>@Service</code>, <code>@Repository</code>, <code>@Controller</code>) marks <b>your own class</b> for scanning. <code>@Bean</code> on a method in a <code>@Configuration</code> class builds an object <b>you do not own</b>, such as a third-party client.`}]},
+ {t:`code`,use:true,cap:`How it is used: two implementations, choosing one`,code:`interface Notifier { void send(String to, String msg); }
+
+@Component @Primary                       // chosen when nothing more specific is asked for
+class EmailNotifier implements Notifier { ... }
+
+@Component("sms")
+class SmsNotifier implements Notifier { ... }
+
+@Service
+class OrderService {
+    OrderService(Notifier defaultOne,                       // gets EmailNotifier (@Primary)
+                 @Qualifier("sms") Notifier smsOne) { ... } // gets SmsNotifier by name
+}`},
+ {t:`p`,h:`<h2>Scopes</h2>`},
+ {t:`cards`,items:[
+   {h:`singleton (default)`,b:`One shared instance per container, not per JVM. So it must be <b>stateless</b> or thread-safe.`},
+   {h:`prototype`,b:`A new instance every time it is requested.`},
+   {h:`request, session`,b:`One per HTTP request or session (web apps).`}]},
+ {t:`mistake`,h:`The scope trap: a <b>singleton</b> that has a <b>prototype</b> injected. The prototype is created <b>once</b>, when the singleton is built, and never again. Fix with <code>ObjectProvider&lt;T&gt;</code> and <code>provider.getObject()</code> at each use, or a scoped proxy. Also: keeping per-user data in a singleton field is a race condition.`},
+ {t:`p`,h:`<h2>The bean lifecycle, in order</h2>`},
+ {t:`diagram`,cap:`The order interviewers want. Setup hooks run after injection and before the bean is used.`,d:{w:420,alt:`Bean lifecycle steps from instantiation to destruction`,nodes:[
+   {id:`a`,t:`1 Create`,s:`constructor`,x:6,y:8,w:92},
+   {id:`b`,t:`2 Inject`,s:`dependencies`,x:114,y:8,w:92},
+   {id:`c`,t:`3 Aware + pre-init`,s:`BeanPostProcessor`,x:222,y:8,w:120},
+   {id:`d`,t:`4 Init`,s:`@PostConstruct`,x:6,y:96,w:112},
+   {id:`e`,t:`5 Post-init`,s:`proxies made`,x:130,y:96,w:100},
+   {id:`f`,t:`6 In use`,x:244,y:104,w:70,k:`state`},
+   {id:`g`,t:`7 Destroy`,s:`@PreDestroy`,x:326,y:96,w:90}],
+  edges:[{a:`a`,b:`b`},{a:`b`,b:`c`},{a:`c`,b:`d`},{a:`d`,b:`e`},{a:`e`,b:`f`},{a:`f`,b:`g`}]}},
+ {t:`code`,use:true,cap:`How it is used: warm a cache at start and close a client at shutdown`,code:`@Component
+class PriceCache {
+    private final PriceClient client;
+    private Map<String, BigDecimal> prices;
+    PriceCache(PriceClient client) { this.client = client; }
+
+    @PostConstruct                    // dependencies are ready here, unlike in a field initialiser
+    void load() { prices = client.fetchAll(); }
+
+    @PreDestroy                       // runs on graceful shutdown
+    void close() { client.close(); }
+}`},
+ {t:`p`,h:`<h2>Circular dependencies</h2>`},
+ {t:`plain`,h:`A needs B, and B needs A. With constructor injection Spring cannot build either first, so it fails at startup with <code>BeanCurrentlyInCreationException</code>. Since Spring Boot 2.6 circular references are <b>blocked by default</b>.`},
+ {t:`steps`,items:[
+   [`Best fix: redesign.`,` A cycle usually means two classes share a responsibility. Pull the shared part into a third class, or use an event so one side no longer calls the other.`],
+   [`Quick fix: @Lazy.`,` Put <code>@Lazy</code> on one constructor parameter. Spring injects a proxy and resolves it on first use.`],
+   [`Do not: turn the check off.`,` <code>spring.main.allow-circular-references=true</code> hides a design problem.`]]},
+ {t:`check`,q:`A singleton service keeps a <code>private User currentUser</code> field set on each request. What goes wrong?`,a:`Spring creates one instance shared by all request threads, so one request overwrites another's user. This is a race that leaks data between users. Keep request data in method parameters or local variables. If you truly need request-scoped state, use a request-scoped bean or <code>ThreadLocal</code> managed carefully.`}
+]},
+
+/* ---------- 3 ---------- */
+{id:`lesson-3`,track:`spring`,trackName:`Spring Boot internals`,title:`Spring Boot auto-configuration: how the magic works`,min:15,
+ promise:`"How does Spring Boot know to set up a DataSource when I never wrote one?" This is the answer.`,
+ blocks:[
+ {t:`plain`,h:`Spring Boot looks at <b>what is on your classpath</b> and <b>what you have already defined</b>, and fills in sensible defaults for the rest. Add <code>spring-boot-starter-web</code> and you get an embedded Tomcat and Jackson. Add a JDBC driver and a DataSource appears. Define your own and Boot steps aside.`},
+ {t:`analogy`,h:`A hotel room set-up. If you ask for a tea kettle, they bring one. If you already brought your own, they do not add a second. Auto-configuration is "add it, unless the guest already has it".`},
+ {t:`p`,h:`<h2>What <code>@SpringBootApplication</code> really is</h2>`},
+ {t:`cards`,items:[
+   {h:`@SpringBootConfiguration`,b:`Marks this as a configuration class.`},
+   {h:`@EnableAutoConfiguration`,b:`Turns on the classpath-driven defaults. The key one.`},
+   {h:`@ComponentScan`,b:`Scans this package and everything under it for components. That is why the main class should sit in the root package.`}]},
+ {t:`p`,h:`<h2>The mechanism, step by step</h2>`},
+ {t:`steps`,items:[
+   [`A list of candidates.`,` Every Boot library ships a file listing its auto-configuration classes. In Boot 3 this is <code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code>. In Boot 2 it was <code>spring.factories</code>.`],
+   [`Spring loads them.`,` <code>@EnableAutoConfiguration</code> imports that list.`],
+   [`Each class has conditions.`,` <code>@ConditionalOnClass</code> (is this library present?), <code>@ConditionalOnMissingBean</code> (did the user define one?), <code>@ConditionalOnProperty</code> (is it enabled?).`],
+   [`Only matching ones apply.`,` The rest are skipped, quietly.`],
+   [`Your config wins.`,` Because of <code>@ConditionalOnMissingBean</code>, a bean you define replaces the default.`]]},
+ {t:`code`,cap:`A tiny auto-configuration, as Boot does it`,code:`@AutoConfiguration
+@ConditionalOnClass(PdfRenderer.class)                    // only if the library is on the classpath
+@EnableConfigurationProperties(PdfProperties.class)
+public class PdfAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean                             // back off if the app defines its own
+    PdfService pdfService(PdfProperties props) {
+        return new PdfService(props.getPageSize());
+    }
+}
+// Register it in:
+// META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports
+//   com.myorg.pdf.PdfAutoConfiguration`},
+ {t:`code`,use:true,cap:`How it is used: seeing which defaults applied, and overriding one`,code:`# See exactly what matched and what did not
+java -jar app.jar --debug
+# prints a "CONDITIONS EVALUATION REPORT": Positive matches / Negative matches
+
+// Override a default by defining your own bean. Boot's ObjectMapper backs off.
+@Bean
+ObjectMapper objectMapper() {
+    return new ObjectMapper()
+        .registerModule(new JavaTimeModule())
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+}`},
+ {t:`p`,h:`<h2>Configuration: properties, profiles, precedence</h2>`},
+ {t:`code`,cap:`Typed properties beat scattered @Value strings`,code:`@ConfigurationProperties(prefix = "payments")
+public record PaymentProperties(String baseUrl, Duration timeout, int retries) {}
+
+# application.yml
+payments:
+  base-url: https://pay.example.in
+  timeout: 2s
+  retries: 3
+
+# application-prod.yml overrides these only when the "prod" profile is active:
+#   java -jar app.jar --spring.profiles.active=prod`},
+ {t:`cards`,items:[
+   {h:`Precedence, high to low`,b:`Command-line arguments, then environment variables, then profile files (<code>application-prod.yml</code>), then <code>application.yml</code>, then defaults. That is how one image runs in every environment.`},
+   {h:`Secrets`,b:`Never in the repo. Use environment variables, Kubernetes secrets, or a vault. Spring reads them the same way.`},
+   {h:`Actuator`,b:`Adds <code>/actuator/health</code>, <code>/metrics</code>, <code>/prometheus</code>. Health feeds Kubernetes liveness and readiness probes.`}]},
+ {t:`mistake`,h:`Putting the main class in a sub-package, so component scanning misses sibling packages. Or defining your own bean and being surprised that the default "disappeared". That is the <code>@ConditionalOnMissingBean</code> rule working as designed.`},
+ {t:`check`,q:`You add a second <code>DataSource</code> bean for a reporting database and the app fails at startup with "expected single matching bean". Why, and what do you do?`,a:`Boot's auto-configured repositories and JPA need exactly one primary DataSource. With two, Spring cannot choose. Mark the main one <code>@Primary</code>, give each a name, and use <code>@Qualifier</code> where you inject. For JPA with two databases you also need two EntityManagerFactory and transaction manager configurations.`}
+]},
+
+/* ---------- 4 ---------- */
+{id:`lesson-4`,track:`spring`,trackName:`Spring Boot internals`,title:`Proxies, AOP and @Transactional: why it sometimes does nothing`,min:18,
+ promise:`The most valuable Spring lesson. Once you see the proxy, every @Transactional puzzle becomes easy.`,
+ blocks:[
+ {t:`plain`,h:`When you put <code>@Transactional</code> on a method, Spring does not change your class. It wraps your bean in a <b>proxy</b>, a stand-in object. Callers talk to the proxy. The proxy opens a transaction, calls your real method, then commits or rolls back.`},
+ {t:`analogy`,h:`A receptionist in front of a doctor. Patients go through the receptionist, who opens the file before and closes it after. If a colleague walks into the doctor's room directly, the receptionist never sees them, and no file is opened.`},
+ {t:`diagram`,cap:`Calls from outside pass through the proxy. A call made inside the same class goes straight to the target and skips it.`,d:{w:420,alt:`Caller goes through proxy to target, while internal self-call bypasses the proxy`,nodes:[
+   {id:`c`,t:`Caller`,x:6,y:20,w:80,k:`state`},
+   {id:`p`,t:`Proxy`,s:`begin / commit`,x:130,y:6,w:110},
+   {id:`t`,t:`Your bean`,s:`real method`,x:290,y:6,w:120,m:[`save()`,`this.audit()`]},
+   {id:`n`,t:`self-call skips the proxy`,x:130,y:96,w:190,k:`note`,m:[`this.audit() = no transaction`]}],
+  edges:[{a:`c`,b:`p`},{a:`p`,b:`t`},{a:`t`,b:`n`,k:`uses`}]}},
+ {t:`code`,use:true,cap:`How it is used: a transfer that must succeed or fail as one`,code:`@Service
+class TransferService {
+    private final AccountRepository accounts;
+    TransferService(AccountRepository accounts) { this.accounts = accounts; }
+
+    @Transactional                                   // proxy opens a transaction around this
+    public void transfer(long fromId, long toId, BigDecimal amt) {
+        Account from = accounts.findById(fromId).orElseThrow();
+        Account to   = accounts.findById(toId).orElseThrow();
+        from.debit(amt);                             // throws if balance is too low
+        to.credit(amt);
+    }   // returns normally -> COMMIT.  RuntimeException escapes -> ROLLBACK both changes
+}`},
+ {t:`p`,h:`<h2>The five ways @Transactional "does nothing"</h2>`},
+ {t:`cards`,items:[
+   {h:`1. Self-invocation`,b:`<code>this.otherMethod()</code> inside the same class bypasses the proxy. The annotation on <code>otherMethod</code> is ignored. Move it to another bean, or inject the bean itself.`},
+   {h:`2. Not a public method on a Spring bean`,b:`Object created with <code>new</code>, a private method, or a final class that cannot be proxied. Treat "public method on a bean" as the safe rule.`},
+   {h:`3. Checked exception`,b:`By default rollback happens only for <code>RuntimeException</code> and <code>Error</code>. Use <code>rollbackFor = Exception.class</code> for checked ones.`},
+   {h:`4. Exception swallowed`,b:`If you catch the exception inside the method, the proxy never sees it, and it commits.`},
+   {h:`5. Different thread`,b:`The transaction is bound to the current thread. Work run in another thread or <code>@Async</code> is outside it.`}]},
+ {t:`code`,bad:true,cap:`Bad: the audit transaction never starts`,code:`@Service
+class OrderService {
+    @Transactional
+    public void place(Order o) {
+        save(o);
+        this.audit(o);                 // direct call: no proxy, so REQUIRES_NEW is ignored
+    }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void audit(Order o) { ... }
+}`},
+ {t:`code`,good:true,cap:`Good: put audit in its own bean so the call goes through its proxy`,code:`@Service
+class AuditService {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)   // commits even if the caller rolls back
+    public void audit(Order o) { ... }
+}
+@Service
+class OrderService {
+    private final AuditService audit;
+    OrderService(AuditService audit) { this.audit = audit; }
+    @Transactional
+    public void place(Order o) { save(o); audit.audit(o); }
+}`},
+ {t:`p`,h:`<h2>Propagation: what if a transaction already exists?</h2>`},
+ {t:`cards`,items:[
+   {h:`REQUIRED (default)`,b:`Join the current one, or start one if none exists.`},
+   {h:`REQUIRES_NEW`,b:`Pause the current one and start a fresh independent one. Good for audit logs.`},
+   {h:`NESTED`,b:`A savepoint inside the current one. Partial rollback is possible.`},
+   {h:`SUPPORTS, NOT_SUPPORTED, MANDATORY, NEVER`,b:`Run with it if it exists, always without one, require one, or forbid one.`}]},
+ {t:`p`,h:`<h2>Two kinds of proxy</h2>`},
+ {t:`two`,a:{h:`JDK dynamic proxy`,b:`Used when the bean implements an interface. The proxy implements the same interface.`},b:{h:`CGLIB proxy`,b:`A generated subclass of your class. Spring Boot uses this by default. That is why a class or method marked <code>final</code> cannot be proxied.`}},
+ {t:`remember`,h:`The same proxy idea powers <code>@Async</code>, <code>@Cacheable</code>, <code>@Retryable</code> and Spring Security's <code>@PreAuthorize</code>. All share the same self-invocation limit. One explanation covers all of them.`},
+ {t:`mistake`,h:`Holding a transaction open across a slow remote call, such as an HTTP request to a payment gateway. The database connection is held the whole time. Do the remote call outside the transaction, or split into steps.`},
+ {t:`check`,q:`A method marked <code>@Transactional</code> throws <code>IOException</code> (checked). The database change is still committed. Why, and what is the fix?`,a:`Spring rolls back by default only for unchecked exceptions (<code>RuntimeException</code> and <code>Error</code>). A checked exception commits. Fix with <code>@Transactional(rollbackFor = IOException.class)</code> or <code>rollbackFor = Exception.class</code>, or throw an unchecked exception.`}
+]},
+
+/* ---------- 5 ---------- */
+{id:`lesson-5`,track:`spring`,trackName:`Spring Boot internals`,title:`Spring MVC, validation, errors and testing`,min:16,
+ promise:`What happens to an HTTP request inside Spring, and the day-to-day pieces around it that interviewers still ask about.`,
+ blocks:[
+ {t:`diagram`,cap:`One servlet receives every request and delegates. Filters run before it, interceptors run around the controller.`,d:{w:420,alt:`Request flows through filters, DispatcherServlet, interceptors, controller and message converter`,nodes:[
+   {id:`f`,t:`Filters`,s:`servlet`,x:6,y:8,w:84},
+   {id:`d`,t:`DispatcherServlet`,s:`front controller`,x:112,y:8,w:130},
+   {id:`i`,t:`Interceptors`,s:`MVC level`,x:258,y:8,w:100},
+   {id:`h`,t:`HandlerMapping`,s:`which one?`,x:6,y:96,w:130},
+   {id:`c`,t:`Controller`,x:154,y:104,w:86},
+   {id:`m`,t:`Message converter`,s:`to JSON`,x:256,y:96,w:150}],
+  edges:[{a:`f`,b:`d`},{a:`d`,b:`i`},{a:`i`,b:`h`},{a:`h`,b:`c`},{a:`c`,b:`m`}]}},
+ {t:`steps`,items:[
+   [`Filter chain.`,` Servlet filters run first (security, logging, CORS).`],
+   [`DispatcherServlet.`,` The single front controller receives the request.`],
+   [`HandlerMapping.`,` Finds the controller method that matches the URL and verb.`],
+   [`Argument resolution.`,` Builds the method parameters: <code>@PathVariable</code>, <code>@RequestBody</code> (JSON converted by Jackson), <code>@Valid</code>.`],
+   [`Controller runs.`,` Calls your service.`],
+   [`Response.`,` With <code>@RestController</code> the return value is written as JSON by a message converter. Exceptions go to <code>@ExceptionHandler</code> methods.`]]},
+ {t:`two`,a:{h:`Filter`,b:`Part of the servlet standard. Sees every request, even ones Spring MVC never handles. Good for security, request logging, compression.`},b:{h:`Interceptor`,b:`Part of Spring MVC. Knows which controller will run. Good for per-handler checks, timing, adding model data.`}},
+ {t:`code`,use:true,cap:`How it is used: validation and one central error response`,code:`record CreateOrder(@NotBlank String sku, @Min(1) int qty, @Email String email) {}
+
+@RestController
+@RequestMapping("/orders")
+class OrderController {
+    @PostMapping
+    ResponseEntity<OrderView> create(@Valid @RequestBody CreateOrder req) {   // bad input -> 400 before this runs
+        return ResponseEntity.status(201).body(service.create(req));
+    }
+}
+
+@RestControllerAdvice
+class Errors {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity<Map<String,String>> invalid(MethodArgumentNotValidException e) {
+        var fields = new LinkedHashMap<String,String>();
+        e.getBindingResult().getFieldErrors().forEach(f -> fields.put(f.getField(), f.getDefaultMessage()));
+        return ResponseEntity.badRequest().body(fields);      // {"qty":"must be greater than or equal to 1"}
+    }
+}`},
+ {t:`p`,h:`<h2>Calling other services</h2>`},
+ {t:`cards`,items:[
+   {h:`RestTemplate`,b:`Older, blocking, in maintenance mode.`},
+   {h:`RestClient`,b:`Added in Spring 6.1 and Boot 3.2. A modern fluent blocking client. The default choice for new blocking code.`},
+   {h:`WebClient`,b:`Non-blocking, from WebFlux. Use when you are reactive, or need streaming.`},
+   {h:`Always`,b:`Set connect and read <b>timeouts</b>, and add retry and a circuit breaker (Resilience4j) for fragile dependencies.`}]},
+ {t:`p`,h:`<h2>Testing: use the smallest slice that works</h2>`},
+ {t:`cards`,items:[
+   {h:`Plain unit test`,b:`No Spring. Constructor-inject mocks. Fastest, and most of your tests.`},
+   {h:`@WebMvcTest`,b:`Loads only controllers, filters and converters. Service is a <code>@MockBean</code>. Tests status codes, validation, JSON shape.`},
+   {h:`@DataJpaTest`,b:`Loads only JPA parts with an in-memory or Testcontainers database.`},
+   {h:`@SpringBootTest`,b:`The whole application. Slow. Keep for a few end-to-end checks, with Testcontainers for real Postgres or Kafka.`}]},
+ {t:`code`,use:true,cap:`How it is used: a controller slice test`,code:`@WebMvcTest(OrderController.class)
+class OrderControllerTest {
+    @Autowired MockMvc mvc;
+    @MockBean OrderService service;
+
+    @Test
+    void rejectsZeroQuantity() throws Exception {
+        mvc.perform(post("/orders").contentType(APPLICATION_JSON)
+               .content("{\\"sku\\":\\"A1\\",\\"qty\\":0,\\"email\\":\\"a@b.in\\"}"))
+           .andExpect(status().isBadRequest());
+    }
+}`},
+ {t:`mistake`,h:`Using <code>@SpringBootTest</code> for everything. A suite of 300 such tests takes many minutes, and nobody runs it locally. Push logic into plain classes and test those without Spring.`},
+ {t:`check`,q:`You need to log the time every request takes, including requests rejected by security. Filter or interceptor?`,a:`A servlet <b>filter</b>, ordered before the security filter chain. An interceptor runs only for requests that reach Spring MVC, so requests rejected earlier by security would not be timed.`}
+]},
+
+/* ---------- 6 ---------- */
+{id:`lesson-6`,track:`spring`,trackName:`Spring Boot internals`,title:`Spring Boot questions with full answers`,min:45,
+ promise:`Twelve questions as they are asked. Say your answer first, then open the walk-through.`,
+ blocks:[
+ {t:`qbank`,items:[
+ {n:`How does Spring Boot auto-configuration work?`,tag:`Boot`,where:`The most repeated Spring Boot question in experienced-developer guides`,
+  ask:`How does Spring Boot know what to configure? How can you override or exclude a default?`,
+  quality:`Name the three annotations, the imports file, and the conditions.`,
+  steps:[[`Entry.`,` <code>@SpringBootApplication</code> includes <code>@EnableAutoConfiguration</code>.`],[`Candidates.`,` Boot reads a list of auto-configuration classes from libraries (the <code>.imports</code> file in Boot 3, <code>spring.factories</code> before).`],[`Conditions.`,` Each class is guarded by <code>@ConditionalOnClass</code>, <code>@ConditionalOnMissingBean</code> or <code>@ConditionalOnProperty</code>.`],[`Override.`,` Define your own bean and the default backs off. Or set properties.`],[`Exclude.`,` <code>@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)</code> or <code>spring.autoconfigure.exclude</code>.`],[`Debug.`,` Run with <code>--debug</code> for the conditions report.`]],
+  trade:`Fast start-up of a project, but hidden behaviour. When surprised, read the conditions report.`,
+  follow:`How would you write your own starter? What is the order of auto-configurations? What does a starter contain?`},
+ {n:`Explain the bean lifecycle`,tag:`Core`,where:`A staple in service-company and product rounds`,
+  ask:`Walk me through the life of a bean from creation to destruction.`,
+  quality:`The right order and where proxies appear.`,
+  steps:[[`Instantiate.`,` Constructor runs.`],[`Populate.`,` Dependencies injected.`],[`Aware callbacks.`,` <code>BeanNameAware</code>, <code>ApplicationContextAware</code>.`],[`Before init.`,` <code>BeanPostProcessor.postProcessBeforeInitialization</code>.`],[`Init.`,` <code>@PostConstruct</code>, <code>afterPropertiesSet</code>, custom init method.`],[`After init.`,` <code>postProcessAfterInitialization</code>. This is where AOP proxies are created.`],[`Use, then destroy.`,` <code>@PreDestroy</code> and <code>destroy()</code> on shutdown. Prototype beans are not destroyed by Spring.`]],
+  trade:`Hooks are powerful, but heavy work in <code>@PostConstruct</code> slows start-up and can fail the whole application.`,
+  follow:`Where do you load config? What is a BeanPostProcessor used for? What is BeanFactoryPostProcessor?`},
+ {n:`How does @Transactional work internally?`,tag:`Proxy`,where:`Very often asked, with the self-invocation follow-up`,
+  ask:`How does @Transactional work? Why does it sometimes not roll back?`,
+  quality:`Proxy mechanism and the specific failure cases.`,
+  steps:[[`Proxy.`,` Spring wraps the bean. A <code>TransactionInterceptor</code> runs around the call.`],[`Flow.`,` Get a connection, begin, call the method, commit if it returns, roll back on a qualifying exception.`],[`Binding.`,` The connection is bound to the thread, so nested calls share it.`],[`Failures.`,` Self-invocation, checked exceptions, swallowed exceptions, non-public or final methods, another thread.`],[`Propagation.`,` REQUIRED by default, REQUIRES_NEW to start a separate one.`]],
+  code:{cap:`Reproducing the self-invocation bug`,code:`@Service
+class Demo {
+    public void outer() { inner(); }          // called from a controller via the proxy
+    @Transactional
+    public void inner() { ... }               // NOT transactional here: outer called it on 'this'
+}`,use:`// Fix 1: move inner() into another bean and inject it.
+// Fix 2: put @Transactional on outer() as well.
+// Fix 3 (last resort): inject the proxy of this bean (@Lazy self-reference) and call self.inner().`},
+  trade:`Proxies are non-invasive but invisible. Learn the limits.`,
+  follow:`What does readOnly = true do? What is the isolation default? How does REQUIRES_NEW behave when the outer one rolls back?`},
+ {n:`Singleton scope and thread safety`,tag:`Core`,where:`Asked to catch candidates who store state in services`,
+  ask:`Spring beans are singletons by default. Is that thread-safe?`,
+  quality:`Spring does not make them safe. Stateless design does.`,
+  steps:[[`Meaning.`,` One instance per container, shared by all threads.`],[`Safe when.`,` The bean is stateless or its state is immutable or properly guarded.`],[`Unsafe when.`,` Mutable fields hold request data.`],[`Fixes.`,` Keep data in method parameters, use request scope, or <code>ThreadLocal</code> with cleanup.`],[`Related trap.`,` A prototype injected into a singleton is created once. Use <code>ObjectProvider</code>.`]],
+  trade:`Singletons are cheap and simple. They push you towards stateless services, which is good for scaling.`,
+  follow:`Is a Spring singleton the same as the Singleton pattern? (no: one per container, not per JVM or classloader)`},
+ {n:`Circular dependency: how do you solve it?`,tag:`Core`,where:`Common because Boot 2.6 turned the leniency off`,
+  ask:`Your app fails with BeanCurrentlyInCreationException. What happened and what do you do?`,
+  quality:`Prefer redesign. Know @Lazy and the setting.`,
+  steps:[[`Cause.`,` A depends on B and B on A through constructors.`],[`Redesign.`,` Extract the shared logic into C, or replace one call with an event.`],[`@Lazy.`,` On one constructor parameter. A proxy is injected and resolved later.`],[`Setter injection.`,` Technically works, but hides the cycle.`],[`Not recommended.`,` <code>spring.main.allow-circular-references=true</code>.`]],
+  trade:`Fixing the design is more work now and avoids confusing bugs later.`,
+  follow:`Why did constructor injection make this visible? What is the three-level cache?`},
+ {n:`@Component, @Service, @Repository, @Bean`,tag:`Core`,where:`Opening question for many rounds`,
+  ask:`What are the differences between these stereotype annotations and @Bean?`,
+  quality:`Same mechanism, different meaning, plus one practical difference for @Repository.`,
+  steps:[[`@Component.`,` Generic stereotype for scanning.`],[`@Service, @Controller.`,` Specialisations that document the layer. <code>@Controller</code> also enables MVC handling.`],[`@Repository.`,` Also translates persistence exceptions into Spring's <code>DataAccessException</code> hierarchy.`],[`@Bean.`,` Method level, in a configuration class, for objects you do not control.`],[`@Configuration.`,` Its methods are proxied, so repeated calls to one <code>@Bean</code> method return the same singleton.`]],
+  trade:`Choose the most specific annotation for readability. Behaviour barely differs apart from the two noted.`,
+  follow:`What is the difference between @Configuration and @Component with @Bean methods? (the "lite" mode has no proxy)`},
+ {n:`Filter vs Interceptor vs AOP`,tag:`Web`,where:`Often asked with logging and security design`,
+  ask:`I want to log every request, check a header on some controllers, and audit calls to service methods. What do I use for each?`,
+  quality:`Match the tool to the layer.`,
+  steps:[[`Every request.`,` A servlet <code>Filter</code> (<code>OncePerRequestFilter</code>). Runs for all requests, even before Spring MVC.`],[`Some controllers.`,` A <code>HandlerInterceptor</code>, registered for specific paths, with access to the handler.`],[`Service methods.`,` AOP with <code>@Aspect</code> and a pointcut. Works on beans, not on raw HTTP.`],[`Order.`,` Filters, then the DispatcherServlet, then interceptors, then AOP around the bean.`]],
+  code:{cap:`A simple timing aspect`,code:`@Aspect @Component
+class TimingAspect {
+    @Around("within(@org.springframework.stereotype.Service *)")
+    Object time(ProceedingJoinPoint pjp) throws Throwable {
+        long t = System.nanoTime();
+        try { return pjp.proceed(); }
+        finally { log.info("{} took {} ms", pjp.getSignature(), (System.nanoTime() - t) / 1_000_000); }
+    }
+}`,use:`// Every public method of every @Service is now timed. No change to the services themselves.
+// Remember: it uses a proxy, so internal self-calls are not timed.`},
+  trade:`AOP is neat for cross-cutting concerns but invisible. Do not hide business logic in aspects.`,
+  follow:`What is a pointcut and an advice? Which advice types exist? How do you order aspects?`},
+ {n:`Profiles, properties and configuration per environment`,tag:`Boot`,where:`Common in DevOps-leaning backend rounds`,
+  ask:`How do you run the same build in dev, test and prod with different settings and secrets?`,
+  quality:`One artifact, external configuration, no secrets in the repo.`,
+  steps:[[`One build.`,` The same jar or image everywhere.`],[`Profiles.`,` <code>application-dev.yml</code>, <code>application-prod.yml</code>, activated with <code>spring.profiles.active</code>.`],[`Precedence.`,` Command line, environment variables, then profile files, then <code>application.yml</code>.`],[`Secrets.`,` Environment variables, Kubernetes Secrets or a vault, never the repo.`],[`Typed access.`,` <code>@ConfigurationProperties</code> with validation, so a missing property fails at start-up.`]],
+  trade:`Many profiles drift apart. Keep differences small and put most settings in the base file.`,
+  follow:`What is Spring Cloud Config? How do you refresh properties without a restart? (@RefreshScope)`},
+ {n:`Actuator and production readiness`,tag:`Boot`,where:`Asked with Kubernetes and monitoring questions`,
+  ask:`What do you enable before taking a Spring Boot service to production?`,
+  quality:`Health, metrics, logging, shutdown and security of the endpoints.`,
+  steps:[[`Health.`,` <code>/actuator/health</code> with liveness and readiness groups for Kubernetes probes.`],[`Metrics.`,` Micrometer exposes JVM, HTTP, pool and custom metrics to Prometheus.`],[`Logging.`,` Structured logs with a correlation id from MDC.`],[`Graceful shutdown.`,` <code>server.shutdown=graceful</code> finishes in-flight requests.`],[`Protect.`,` Expose only the needed endpoints and require authentication for the rest.`]],
+  trade:`More endpoints mean more insight and more attack surface.`,
+  follow:`Liveness versus readiness? What should a readiness check include? (dependencies needed to serve traffic)`},
+ {n:`Handling errors and validation consistently`,tag:`Web`,where:`Typical API design discussion`,
+  ask:`How do you return consistent errors from a REST API?`,
+  quality:`One central handler, a stable error shape, correct status codes.`,
+  steps:[[`Validate at the edge.`,` <code>@Valid</code> with Bean Validation constraints on the request record.`],[`One advice.`,` A <code>@RestControllerAdvice</code> maps exceptions to responses.`],[`Stable shape.`,` Use RFC 7807 problem details, which Spring 6 supports with <code>ProblemDetail</code>.`],[`Right codes.`,` 400 invalid input, 401 and 403 for auth, 404 not found, 409 conflict, 422 business rule, 500 unexpected.`],[`Do not leak.`,` No stack traces to clients. Log them with a correlation id.`]],
+  trade:`Business exceptions as 4xx help clients. Mapping everything to 500 hides who is at fault.`,
+  follow:`How do you validate path variables? How do you add a trace id to the response?`},
+ {n:`Testing a Spring Boot service`,tag:`Testing`,where:`Asked for senior roles that own quality`,
+  ask:`How do you structure tests for a service with a REST layer, JPA and Kafka?`,
+  quality:`A test pyramid with the right slices.`,
+  steps:[[`Unit.`,` Plain JUnit and Mockito for business classes. Majority of tests.`],[`Web slice.`,` <code>@WebMvcTest</code> for validation, status codes and JSON.`],[`Data slice.`,` <code>@DataJpaTest</code> with Testcontainers for the real database engine.`],[`Integration.`,` A few <code>@SpringBootTest</code> flows with Testcontainers for Kafka and Postgres.`],[`Contract.`,` Consumer-driven contracts if services are owned by different teams.`]],
+  trade:`In-memory H2 is fast but differs from production SQL. Testcontainers is slower and more faithful.`,
+  follow:`@MockBean vs @Mock? How do you test a @Transactional rollback? How do you keep context start-up fast? (reuse the same context configuration)`},
+ {n:`Spring Boot 3 and what changed from 2`,tag:`Versions`,where:`Rising in 2026 migration-themed rounds`,
+  ask:`What changed in Boot 3, and what would you check when upgrading?`,
+  quality:`Java 17 baseline, Jakarta, and the concrete breakages.`,
+  steps:[[`Java 17.`,` The minimum version.`],[`Jakarta.`,` <code>javax.*</code> became <code>jakarta.*</code> (servlet, persistence, validation). Imports change.`],[`Spring Security 6.`,` <code>WebSecurityConfigurerAdapter</code> removed. Use a <code>SecurityFilterChain</code> bean.`],[`Auto-configuration.`,` Registration moved to the <code>.imports</code> file.`],[`Native and observability.`,` GraalVM native images and Micrometer observability are first-class.`],[`Path.`,` Go to the latest Boot 2.7 first, fix deprecations, then 3.0, using the migration guide and the properties migrator.`]],
+  trade:`Upgrade effort is in dependencies and the javax rename, not in your logic.`,
+  follow:`Are trailing-slash URLs still matched? (no, in Spring 6) What is the Spring Boot properties migrator?`}
+ ]},
+ {t:`p`,h:`<h2>Where this came from</h2><p>Topics were drawn from current Spring and Spring Boot interview guides for experienced developers. They are general, not Pune-specific.</p>`},
+ {t:`links`,items:[
+  [`Advanced Spring Boot interview questions for experienced developers, Aloa`,`https://aloa.co/blog/advanced-spring-boot-interview-questions-for-experienced-developers`],
+  [`Spring Boot advanced interview handbook`,`https://interview-handbooks.pages.dev/backend/spring-boot/`],
+  [`Spring Boot interview questions and answers (2026), lets-code.co.in`,`https://lets-code.co.in/articles/springbootinterview`],
+  [`Top 60 Spring Boot interview questions (2026), Hyring`,`https://hyring.com/jobseeker-toolkit/interview-questions/technical/spring-boot`],
+  [`Spring Boot interview questions for Java engineers, prachub`,`https://prachub.com/resources/spring-boot-interview-questions-for-java-engineers-dependency-injection-transactions-security-and-production`],
+  [`100 Spring Boot interview questions for 2 to 5 years, Coding Shuttle`,`https://www.codingshuttle.com/blogs/100-spring-boot-interview-questions-with-answers-for-2-to-5-years-experienced-java-developers`]]}
+]}
+
+];
+
+/* ================= RENDER ================= */
+var STAGES=[
+ {l:'1 server',hurt:'Nothing yet.',fix:'One app server and one database is a perfectly good start. Spend your effort on a clean data model and the right indexes.',cost:'None, and that is the point. Every extra part is something to run and debug.'},
+ {l:'Slow queries',hurt:'Pages slow down because the app and database share one machine, and some queries scan whole tables.',fix:'Add indexes. Move the database to its own machine. Use a bigger machine if needed.',cost:'A bigger machine has a ceiling, and one failure still takes everything down.'},
+ {l:'Read-heavy',hurt:'The database is busy answering the same read questions again and again.',fix:'Add a cache for popular data. Add read replicas (copies for reading).',cost:'Data can be slightly stale. You now have to decide when to refresh the cache.'},
+ {l:'One server is not enough',hurt:'One app server cannot take the traffic, and if it dies, the site is down.',fix:'Run several identical app servers behind a load balancer. Keep them stateless, so any server can handle any request.',cost:'You must move user sessions out of server memory, and handle deployments carefully.'},
+ {l:'Slow work blocks users',hurt:'Sending emails or making reports makes users wait. Spikes of traffic can overwhelm the database.',fix:'Put slow work on a queue and let workers process it in the background.',cost:'Duplicates can happen, so workers must be safe to run twice. Users see "pending" for a while.'},
+ {l:'Data too big',hurt:'One database cannot hold all the data or take all the writes.',fix:'Split the data across several databases by a key, such as user id. This is sharding.',cost:'Queries across shards are hard, and a popular key can overload one shard.'},
+ {l:'Global users',hurt:'Users far from your servers get slow responses, and one data-center outage takes everyone down.',fix:'Serve static files from a CDN. Run in more than one region and route users to the nearest one.',cost:'Data in different regions can briefly disagree, and the bill grows a lot.'}
+];
+
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+
+function fmt(n){
+  if(n>=1e9)return (n/1e9).toFixed(1)+' B';
+  if(n>=1e6)return (n/1e6).toFixed(1)+' M';
+  if(n>=1e3)return (n/1e3).toFixed(1)+' K';
+  return n<10?n.toFixed(1):String(Math.round(n));
+}
+function fmtBytes(n){var u=['B','KB','MB','GB','TB','PB'],i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(1):Math.round(n))+' '+u[i]}
+
+function renderBlock(b,host){
+  var n;
+  switch(b.t){
+  case 'p': host.appendChild(el('div','sec',b.h));break;
+  case 'plain': n=el('div','box');n.appendChild(el('div','label','In plain words'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'analogy': n=el('div','box plain');n.appendChild(el('div','label','Picture it'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'mistake': n=el('div','box mistake');n.appendChild(el('div','label','Common mistake'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'remember': n=el('div','box remember');n.appendChild(el('div','label','Remember this'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'steps':
+    n=el('ol','steps');
+    b.items.forEach(function(s){var li=el('li',null,'<div><b>'+s[0]+'</b>'+s[1]+'</div>');n.appendChild(li)});
+    host.appendChild(n);break;
+  case 'two':
+    n=el('div','two');
+    [b.a,b.b].forEach(function(x){n.appendChild(el('div',null,'<div class="h">'+x.h+'</div><p>'+x.b+'</p>'))});
+    host.appendChild(n);break;
+  case 'cards':
+    n=el('div','cards');
+    b.items.forEach(function(c){
+      n.appendChild(el('div','card','<h3>'+c.h+'</h3>'+(c.pic?'<div class="pic">'+c.pic+'</div>':'')+'<p>'+c.b+'</p>'+(c.small?'<p class="small">'+c.small+'</p>':'')));
+    });
+    host.appendChild(n);break;
+  case 'code':
+    n=el('div','sec');
+    var cap=el('div','cap'+(b.bad?' bad':'')+(b.good?' good':''),b.cap||'');
+    if(b.use)cap.className+=' use';
+    var pre=document.createElement('pre');pre.textContent=b.code;if(b.use)pre.className='use';
+    n.appendChild(cap);n.appendChild(pre);host.appendChild(n);break;
+  case 'check':
+    n=el('div','check');
+    n.appendChild(el('div','label','Check yourself'));
+    n.appendChild(el('p','q',b.q));
+    var btn=el('button','reveal','Think, then show the answer');btn.type='button';
+    var ans=el('div','ans',b.a);ans.hidden=true;
+    btn.addEventListener('click',function(){ans.hidden=!ans.hidden;btn.textContent=ans.hidden?'Think, then show the answer':'Hide the answer'});
+    n.appendChild(btn);n.appendChild(ans);host.appendChild(n);break;
+  case 'qbank': host.appendChild(buildQbank(b.items));break;
+  case 'diagram': host.appendChild(buildDiagram(b));break;
+  case 'links':
+    n=el('div','links');
+    b.items.forEach(function(x){var a=document.createElement('a');a.href=x[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=x[0];n.appendChild(a)});
+    host.appendChild(n);break;
+  case 'calc': host.appendChild(buildCalc());break;
+  case 'stages': host.appendChild(buildStages());break;
+  case 'drill': host.appendChild(buildDrill());break;
+  }
+}
+
+function buildCalc(){
+  var box=el('div','check');
+  box.appendChild(el('div','label','Try it'));
+  box.appendChild(el('p',null,'Change the numbers and watch what moves. Start with the example from above.'));
+  box.appendChild(el('div','fields',
+    '<div class="field"><label for="c-dau">Daily users (millions)</label><input id="c-dau" type="number" min="0" step="any" value="10"></div>'+
+    '<div class="field"><label for="c-act">Actions per user per day</label><input id="c-act" type="number" min="0" step="any" value="20"></div>'+
+    '<div class="field"><label for="c-rpw">Reads for every 1 write</label><input id="c-rpw" type="number" min="0" step="any" value="10"></div>'));
+  var out=el('div','out');out.setAttribute('aria-live','polite');box.appendChild(out);
+  var msg=el('div','box');box.appendChild(msg);
+  function num(id){var v=parseFloat(box.querySelector(id).value);return isFinite(v)&&v>=0?v:0}
+  function run(){
+    var dau=num('#c-dau')*1e6,act=num('#c-act'),rpw=num('#c-rpw');
+    var day=dau*act,avg=day/86400,pk=avg*3,w=pk/(rpw+1),r=pk-w;
+    var data=day/(rpw+1)*1000*365;
+    out.innerHTML=
+      '<div><span>Requests per day</span><b>'+fmt(day)+'</b></div>'+
+      '<div><span>Average per second</span><b>'+fmt(avg)+'</b></div>'+
+      '<div><span>Busy-hour per second (x3)</span><b>'+fmt(pk)+'</b></div>'+
+      '<div><span>Reads per second at peak</span><b>'+fmt(r)+'</b></div>'+
+      '<div><span>Writes per second at peak</span><b>'+fmt(w)+'</b></div>'+
+      '<div><span>New data per year (1 KB per write)</span><b>'+fmtBytes(data)+'</b></div>';
+    var m;
+    if(r<1000&&w<500)m='<b>What this means:</b> one well-tuned database can handle this. Keep it simple.';
+    else if(r<10000)m='<b>What this means:</b> reads are the pressure. Add a cache and maybe read replicas.';
+    else m='<b>What this means:</b> reads are very high. You need a cache layer, and likely a CDN for static files.';
+    if(w>=5000)m+=' Writes are high too, so think about a queue and splitting the data.';
+    msg.innerHTML='<p>'+m+'</p>';
+  }
+  box.addEventListener('input',run);run();
+  return box;
+}
+
+function buildStages(){
+  var wrap=el('div','sec'),sel=2;
+  var row=el('div','row');wrap.appendChild(row);
+  var panel=el('div','check');panel.setAttribute('aria-live','polite');wrap.appendChild(panel);
+  function draw(){
+    Array.prototype.forEach.call(row.children,function(b,i){b.setAttribute('aria-pressed',i===sel?'true':'false')});
+    var s=STAGES[sel];
+    panel.innerHTML='<div><div class="label">What hurts</div><p>'+s.hurt+'</p></div>'+
+      '<div><div class="label">The fix</div><p>'+s.fix+'</p></div>'+
+      '<div><div class="label">What the fix costs</div><p>'+s.cost+'</p></div>';
+  }
+  STAGES.forEach(function(s,i){
+    var b=el('button','stage',s.l);b.type='button';
+    b.addEventListener('click',function(){sel=i;draw()});row.appendChild(b);
+  });
+  draw();return wrap;
+}
+
+function buildDiagram(b){
+  var spec=b.d,NS='http://www.w3.org/2000/svg';
+  function s(tag,attrs,text){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+  var W=spec.w||420,byId={};
+  spec.nodes.forEach(function(n){
+    var hdr=n.k==='state'?34:(n.k==='note'?0:(n.s?38:28));
+    var ml=n.m?n.m.length:0;
+    if(n.k==='state')n.h=34;
+    else if(n.k==='note')n.h=ml*14+14;
+    else n.h=hdr+(ml?10+14*ml:0);
+    n.hdr=hdr;byId[n.id]=n;
+  });
+  var H=0;spec.nodes.forEach(function(n){H=Math.max(H,n.y+n.h)});H+=14;
+  var svg=s('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':spec.alt||''});
+  var defs=s('defs',{});
+  function marker(id,w,h,rx,ry,child){
+    var m=s('marker',{id:id,viewBox:'0 0 '+w+' '+h,refX:rx,refY:ry,markerWidth:w,markerHeight:h,markerUnits:'userSpaceOnUse',orient:'auto'});
+    m.appendChild(child);defs.appendChild(m);
+  }
+  var uid='m'+Math.floor(Math.random()*1e6);
+  marker(uid+'t',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-tri'}));
+  marker(uid+'o',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11','class':'mk-open'}));
+  marker(uid+'f',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-fill'}));
+  marker(uid+'d',14,12,0,6,s('path',{d:'M1,6 L7,1 L13,6 L7,11 z','class':'mk-tri'}));
+  svg.appendChild(defs);
+  function clip(n,tx,ty){
+    var cx=n.x+n.w/2,cy=n.y+n.h/2,dx=tx-cx,dy=ty-cy;
+    if(dx===0&&dy===0)return [cx,cy];
+    var t=Math.min(dx!==0?(n.w/2)/Math.abs(dx):1e9,dy!==0?(n.h/2)/Math.abs(dy):1e9);
+    return [cx+dx*t,cy+dy*t];
+  }
+  spec.edges.forEach(function(e){
+    var A=byId[e.a],B=byId[e.b];
+    var ax=A.x+A.w/2,ay=A.y+A.h/2,bx=B.x+B.w/2,by=B.y+B.h/2;
+    var dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy)||1,o=e.o||0;
+    var nx=-dy/len*o,ny=dx/len*o;
+    var p1=clip(A,bx+nx,by+ny),p2=clip(B,ax+nx,ay+ny);
+    p1=[p1[0]+nx,p1[1]+ny];p2=[p2[0]+nx,p2[1]+ny];
+    var k=e.k||'arrow',dash=(k==='implements'||k==='uses');
+    var line=s('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],'class':'dg-e'+(dash?' dash':'')});
+    if(k==='extends'||k==='implements')line.setAttribute('marker-end','url(#'+uid+'t)');
+    else if(k==='uses')line.setAttribute('marker-end','url(#'+uid+'o)');
+    else if(k==='has'){line.setAttribute('marker-start','url(#'+uid+'d)');line.setAttribute('marker-end','url(#'+uid+'o)')}
+    else line.setAttribute('marker-end','url(#'+uid+'f)');
+    svg.appendChild(line);
+    if(e.l){
+      var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2,lw=e.l.length*5.6+10;
+      svg.appendChild(s('rect',{x:mx-lw/2,y:my-8,width:lw,height:15,rx:3,'class':'dg-lb'}));
+      svg.appendChild(s('text',{x:mx,y:my+3.5,'class':'dg-l'},e.l));
+    }
+  });
+  spec.nodes.forEach(function(n){
+    var cls=n.k==='iface'?'dg-if':(n.k==='state'?'dg-st':(n.k==='note'?'dg-note':'dg-box'));
+    svg.appendChild(s('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:n.k==='state'?17:6,'class':cls}));
+    if(n.k==='note'){
+      (n.m||[]).forEach(function(l,i){svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+16+i*14,'class':'dg-n'},l))});
+      return;
+    }
+    if(n.s)svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+15,'class':'dg-s'},'«'+n.s+'»'));
+    svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+(n.k==='state'?22:(n.s?31:19)),'class':'dg-t'},n.t));
+    if(n.m&&n.m.length){
+      svg.appendChild(s('line',{x1:n.x,y1:n.y+n.hdr,x2:n.x+n.w,y2:n.y+n.hdr,'class':'dg-sep'}));
+      n.m.forEach(function(l,i){svg.appendChild(s('text',{x:n.x+8,y:n.y+n.hdr+6+(i+1)*14-3,'class':'dg-m'},l))});
+    }
+  });
+  var wrap=el('div','diagram');
+  wrap.appendChild(svg);
+  if(b.cap)wrap.appendChild(el('p','dcap',b.cap));
+  return wrap;
+}
+
+function buildQbank(items){
+  var wrap=el('div');
+  items.forEach(function(q){
+    var d=document.createElement('details');d.className='q';
+    var s=document.createElement('summary');
+    s.innerHTML='<span class="qleft"><span>'+q.n+'</span><span class="pill">'+q.tag+'</span></span>';
+    d.appendChild(s);
+    var b=el('div','qbody');
+    b.appendChild(el('p','where','<b>Seen in:</b> '+q.where));
+    b.appendChild(el('div','qsec','<div class="label">The question</div><p>'+q.ask+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">What matters most</div><p>'+q.quality+'</p>'));
+    var st=el('div','qsec','<div class="label">Walk through it</div>');
+    var ol=el('ol','steps');
+    q.steps.forEach(function(x){ol.appendChild(el('li',null,'<div><b>'+x[0]+'</b>'+x[1]+'</div>'))});
+    st.appendChild(ol);b.appendChild(st);
+    if(q.code){
+      var c=el('div','qsec');
+      c.appendChild(el('div','cap',q.code.cap));
+      var pre=document.createElement('pre');pre.textContent=q.code.code;c.appendChild(pre);
+      if(q.code.use){
+        c.appendChild(el('div','cap use','How it is used'));
+        var p2=document.createElement('pre');p2.className='use';p2.textContent=q.code.use;c.appendChild(p2);
+      }
+      b.appendChild(c);
+    }
+    b.appendChild(el('div','qsec','<div class="label">Trade-offs to say out loud</div><p>'+q.trade+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">Follow-ups to expect</div><p>'+q.follow+'</p>'));
+    d.appendChild(b);wrap.appendChild(d);
+  });
+  return wrap;
+}
+
+var P={lld:['Design a parking lot','Design an elevator system','Design Splitwise (shared expenses)','Design a library system','Design a vending machine','Design an LRU cache','Design a chess game','Design an ATM','Design a movie ticket booking system','Design a logging framework'],
+ hld:['Design a URL shortener','Design a news feed','Design a chat application','Design a video streaming service','Design a ride-hailing app','Design a notification system','Design a web crawler','Design search autocomplete','Design a payment system','Design a ticket booking system']};
+var timerState={remaining:1200,running:false,endAt:0,id:null};
+function buildDrill(){
+  var box=el('div','check'),kind='lld',cur='';
+  box.appendChild(el('div','label','Today\'s drill'));
+  var pill=el('span','pill','LLD');var pw=el('div');pw.appendChild(pill);box.appendChild(pw);
+  var prompt=el('p',null,'');prompt.style.cssText='font:600 1.2rem/1.4 var(--font-display)';box.appendChild(prompt);
+  var r1=el('div','row');
+  var bl=el('button','reveal','New LLD prompt'),bh=el('button','reveal','New HLD prompt');bl.type=bh.type='button';
+  r1.appendChild(bl);r1.appendChild(bh);box.appendChild(r1);
+  var time=el('div','timer','20:00');box.appendChild(time);
+  var phase=el('p',null,'Ready when you are.');box.appendChild(phase);
+  var r2=el('div','row');
+  var st=el('button','btn','Start'),rs=el('button','btn ghost','Reset');st.type=rs.type='button';
+  r2.appendChild(st);r2.appendChild(rs);box.appendChild(r2);
+  function pick(k){kind=k;var l=P[k],p=cur;while(p===cur)p=l[Math.floor(Math.random()*l.length)];cur=p;prompt.textContent=p;pill.textContent=k.toUpperCase()}
+  function render(){
+    var rem=timerState.remaining,m=Math.floor(rem/60),s=rem%60;
+    time.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    var el_=1200-rem,txt;
+    if(rem<=0)txt='Time. Now write one line: what did I skip or hand-wave?';
+    else if(!timerState.running&&el_===0)txt='Ready when you are. Talk out loud.';
+    else if(el_<300)txt='Clarify: ask questions, pick three must-haves and one key quality.';
+    else if(el_<900)txt=kind==='lld'?'Model: nouns, verbs, who owns what, what will change.':'Model: numbers, the two actions, smallest design, what breaks first.';
+    else txt='Stress and trade: two users at once, a new requirement, then the template sentence.';
+    phase.textContent=txt;
+    st.textContent=timerState.running?'Pause':(rem<=0||rem===1200?'Start':'Resume');
+  }
+  function tick(){
+    timerState.remaining=Math.max(0,Math.ceil((timerState.endAt-Date.now())/1000));
+    if(timerState.remaining<=0){timerState.running=false;clearInterval(timerState.id);timerState.id=null}
+    render();
+  }
+  st.addEventListener('click',function(){
+    if(timerState.running){timerState.running=false;clearInterval(timerState.id);timerState.id=null;render();return}
+    if(timerState.remaining<=0)timerState.remaining=1200;
+    timerState.running=true;timerState.endAt=Date.now()+timerState.remaining*1000;
+    timerState.id=setInterval(tick,500);render();
+  });
+  rs.addEventListener('click',function(){timerState.running=false;clearInterval(timerState.id);timerState.id=null;timerState.remaining=1200;render()});
+  bl.addEventListener('click',function(){pick('lld');render()});
+  bh.addEventListener('click',function(){pick('hld');render()});
+  pick('lld');render();
+  return box;
+}
+
+/* ================= PAGE ================= */
+var cur=0;
+function idx(){
+  var h=(location.hash||'').replace('#','');
+  for(var i=0;i<L.length;i++)if(L[i].id===h)return i;
+  return 0;
+}
+function drawList(){
+  var host=$('#list');host.innerHTML='';
+  var last='';
+  L.forEach(function(l,i){
+    if(l.trackName!==last){last=l.trackName;host.appendChild(el('h3',null,l.trackName))}
+    var a=document.createElement('a');a.href='#'+l.id;
+    if(i===cur)a.setAttribute('aria-current','page');
+    a.innerHTML='<span class="n">'+(i+1)+'</span><span>'+l.title+'</span><span class="'+(done[l.id]?'tick':'min')+'">'+(done[l.id]?'&#10003; done':l.min+' min')+'</span>';
+    a.addEventListener('click',function(){closeList()});
+    host.appendChild(a);
+  });
+}
+function closeList(){$('#list').classList.remove('open');$('#menu-btn').setAttribute('aria-expanded','false')}
+$('#menu-btn').addEventListener('click',function(){
+  var o=$('#list').classList.toggle('open');this.setAttribute('aria-expanded',o?'true':'false');
+});
+function meter(){
+  var n=0;L.forEach(function(l){if(done[l.id])n++});
+  $('#meter').style.width=Math.round(n/L.length*100)+'%';
+}
+function draw(){
+  cur=idx();
+  var l=L[cur];
+  document.body.setAttribute('data-track',l.track);
+  $('#where').textContent='Lesson '+(cur+1)+' of '+L.length+' · '+l.trackName;
+  var host=$('#lesson');host.innerHTML='';
+  var head=el('div');
+  head.appendChild(el('div','kicker',l.trackName+' · about '+l.min+' minutes'));
+  head.appendChild(el('h1',null,l.title));
+  head.appendChild(el('p','promise',l.promise));
+  host.appendChild(head);
+  l.blocks.forEach(function(b){renderBlock(b,host)});
+  var dr=el('label','done-row');
+  var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!done[l.id];
+  cb.addEventListener('change',function(){if(cb.checked)done[l.id]=1;else delete done[l.id];save();meter();drawList()});
+  dr.appendChild(cb);dr.appendChild(el('span',null,'I finished this lesson'));
+  host.appendChild(dr);
+  var nav=el('div','nav');
+  var pv=el('button','btn ghost','Previous');pv.type='button';pv.disabled=cur===0;
+  var nx=el('button','btn',cur===L.length-1?'Back to lesson 1':'Next lesson');nx.type='button';
+  pv.addEventListener('click',function(){if(cur>0)location.hash=L[cur-1].id});
+  nx.addEventListener('click',function(){location.hash=L[cur===L.length-1?0:cur+1].id});
+  nav.appendChild(pv);nav.appendChild(nx);host.appendChild(nav);
+  meter();drawList();
+}
+window.addEventListener('hashchange',function(){draw();window.scrollTo(0,0)});
+draw();
+})();
+</script>

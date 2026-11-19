@@ -1,0 +1,1104 @@
+<title>SQL, JPA and Kafka Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F6F5F1; --surface:#FFFFFF; --surface-2:#EDEBE4; --fg:#1D2530; --muted:#556170; --line:#DAD7CD;
+  --start:#4B3FA8; --lld:#0B6B6A; --hld:#244A8F; --practice:#9A4A12; --bank:#8A2D63; --pat:#3F6B1F;
+  --accent:var(--start);
+  --start-soft:#E7E4F7; --bank-soft:#F6E1EE; --pat-soft:#E3F0D3; --accent-soft:var(--start-soft); --lld-soft:#D9EFED; --hld-soft:#E0E8F8; --practice-soft:#F8E6D6;
+  --good:#17794A; --good-soft:#DCF2E6; --bad:#B3261E; --bad-soft:#FBE2DF; --warn-soft:#FBEBCD; --warn:#8A4B00;
+  --code-bg:#F0EEE7; --on-accent:#FFFFFF;
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+    --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+    --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+    --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+    --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10151C; --surface:#18202A; --surface-2:#202B37; --fg:#E7ECF2; --muted:#A0AEBD; --line:#2C3947;
+  --start:#B6A9FF; --lld:#5FD6CB; --hld:#8DB2FF; --practice:#F0B27A; --bank:#F2A0CE; --pat:#A8DB6B;
+  --start-soft:#2A2550; --bank-soft:#3A1830; --pat-soft:#1F3318; --lld-soft:#12363A; --hld-soft:#1A2B4D; --practice-soft:#3A2616;
+  --good:#5CD39A; --good-soft:#143525; --bad:#FF8A80; --bad-soft:#3A1B19; --warn-soft:#352A12; --warn:#F2B45C;
+  --code-bg:#0D1218; --on-accent:#10151C; color-scheme:dark;
+}
+body[data-track="start"]{--accent:var(--start);--accent-soft:var(--start-soft)}
+body[data-track="lld"]{--accent:var(--lld);--accent-soft:var(--lld-soft)}
+body[data-track="hld"]{--accent:var(--hld);--accent-soft:var(--hld-soft)}
+body[data-track="practice"]{--accent:var(--practice);--accent-soft:var(--practice-soft)}
+body[data-track="bank"]{--accent:var(--bank);--accent-soft:var(--bank-soft)}
+body[data-track="patterns"]{--accent:var(--pat);--accent-soft:var(--pat-soft)}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.75 var(--font-body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+p{margin:0}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.2;text-wrap:balance}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0;display:flex;align-items:center;gap:12px}
+.bar .where{flex:1;min-width:0;font:500 .85rem var(--font-mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:.92rem}
+body[data-track="data"]{--accent:var(--practice);--accent-soft:var(--practice-soft)}
+.homelink{color:var(--accent);text-decoration:none;font-weight:600;font-size:.92rem;padding:8px 4px}
+.meter{height:4px;background:var(--surface-2)}
+.meter i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+
+/* lesson list */
+.list{display:none;padding:16px 0 8px}
+.list.open{display:block}
+.list h3{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.list a{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;text-decoration:none;color:var(--fg);font-size:.98rem}
+.list a:hover{background:var(--surface-2)}
+.list a[aria-current="page"]{background:var(--surface);border:1px solid var(--line)}
+.list .n{font:500 .8rem var(--font-mono);color:var(--muted)}
+.list .tick{font-size:.85rem;color:var(--good)}
+.list .min{font:400 .75rem var(--font-mono);color:var(--muted)}
+
+/* lesson */
+.lesson{padding-top:36px;display:flex;flex-direction:column;gap:28px}
+.kicker{font:600 .78rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lesson h1{font-size:clamp(1.9rem,5vw,2.5rem);font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.promise{color:var(--muted);font-size:1.08rem;margin-top:10px}
+.sec{display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font:600 .75rem var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.sec h2{font-size:1.3rem;font-weight:600}
+.sec p+p{margin-top:2px}
+b,strong{font-weight:600}
+.box{border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;background:var(--accent-soft)}
+.box.plain{background:var(--surface);border:1px solid var(--line)}
+.box.mistake{background:var(--bad-soft)}
+.box.mistake .label{color:var(--bad)}
+.box.remember{background:var(--warn-soft)}
+.box.remember .label{color:var(--warn)}
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:flex;flex-direction:column;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px}
+ol.steps li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);font:600 .85rem var(--font-mono);display:grid;place-items:center;margin-top:2px}
+ol.steps b{display:block}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:620px){.two{grid-template-columns:1fr}}
+.two>div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px 16px;min-width:0}
+.two .h{font:600 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.cards{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.card h3{font-size:1.05rem}
+.card .pic{color:var(--accent);font-weight:600;font-size:.95rem}
+.card .small{color:var(--muted);font-size:.93rem}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 .84rem/1.6 var(--font-mono);tab-size:2}
+.cap{font:500 .75rem var(--font-mono);color:var(--muted);margin-bottom:-4px}
+.cap.bad{color:var(--bad)} .cap.good{color:var(--good)}
+.cap.use{color:var(--accent);font-weight:600}
+pre.use{border-left:3px solid var(--accent)}
+.check{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.check .q{font-weight:600}
+.reveal{align-self:flex-start;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer}
+.ans{background:var(--good-soft);border-radius:10px;padding:12px 14px}
+.ans[hidden]{display:none}
+.nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:12px;padding:12px 20px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.done-row{display:flex;align-items:center;gap:10px}
+.done-row input{width:20px;height:20px;accent-color:var(--accent)}
+
+/* calculator + timer */
+.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:620px){.fields{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:.85rem;color:var(--muted)}
+.field input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:500 1rem var(--font-mono)}
+.out{display:flex;flex-direction:column}
+.out div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.out span{color:var(--muted);font-size:.95rem}
+.out b{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.timer{font:500 clamp(2.6rem,9vw,3.6rem)/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font:500 .75rem var(--font-mono);letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.stage{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font:500 .85rem var(--font-mono)}
+.stage[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+
+code{font:500 .86em var(--font-mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+pre code{padding:0;background:none}
+
+/* diagrams */
+.diagram{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:14px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.diagram svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.diagram .dcap{font-size:.88rem;color:var(--muted);text-align:center}
+.dg-box{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.2}
+.dg-if{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-st{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.4}
+.dg-note{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-dasharray:4 3}
+.dg-sep{stroke:var(--muted);stroke-width:1;opacity:.6}
+.dg-t{font:600 12.5px var(--font-display);fill:var(--fg);text-anchor:middle}
+.dg-s{font:italic 400 10px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-m{font:400 10.5px var(--font-mono);fill:var(--fg)}
+.dg-n{font:400 10.5px var(--font-mono);fill:var(--muted);text-anchor:middle}
+.dg-e{stroke:var(--muted);stroke-width:1.4;fill:none}
+.dg-e.dash{stroke-dasharray:5 4}
+.dg-lb{fill:var(--surface)}
+.dg-l{font:500 10.5px var(--font-body);fill:var(--fg);text-anchor:middle}
+.mk-tri{fill:var(--surface);stroke:var(--muted);stroke-width:1.2}
+.mk-open{fill:none;stroke:var(--muted);stroke-width:1.4}
+.mk-fill{fill:var(--muted);stroke:none}
+/* question bank */
+details.q{border:1px solid var(--line);background:var(--surface);border-radius:14px}
+details.q+details.q{margin-top:10px}
+details.q>summary{cursor:pointer;list-style:none;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:600 1.05rem/1.3 var(--font-display)}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"+";font:500 1.3rem var(--font-mono);color:var(--accent);flex:none}
+details.q[open]>summary::after{content:"\2212"}
+details.q[open]>summary{border-bottom:1px solid var(--line)}
+.qleft{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.qbody{padding:18px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.qbody .where{font-size:.9rem;color:var(--muted)}
+.qsec{display:flex;flex-direction:column;gap:6px;min-width:0}
+.qlist{margin:0;padding-left:20px}
+.qlist li+li{margin-top:6px}
+.links{display:flex;flex-direction:column;gap:8px}
+.links a{color:var(--accent);word-break:break-word}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <a class="homelink" href="index.html">Home</a>
+    <span class="where" id="where">Lesson 1</span>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="list">All lessons</button>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <nav class="list" id="list" aria-label="Lessons"></nav>
+  <main class="lesson" id="lesson"></main>
+</div>
+
+<script>
+(function(){
+'use strict';
+var $=function(s,r){return (r||document).querySelector(s)};
+var KEY='data-course-v1';
+var done={};
+try{done=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){done={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(done))}catch(e){}}
+
+/* ================= CONTENT ================= */
+/* block types: p, plain, analogy, steps, two, cards, code, mistake, check, remember, calc, drill, stages */
+var L=[
+/* ---------- 1 ---------- */
+{id:`lesson-1`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`The data layer: what gets asked and how to prepare`,min:8,
+ promise:`Databases and messaging sit under every backend system. Here is the map of what experienced candidates are asked, and the order to learn it in.`,
+ blocks:[
+ {t:`plain`,h:`Two things hurt real systems most: <b>slow or wrong database access</b> and <b>messages that get lost, duplicated or reordered</b>. Interviews probe both. Expect one SQL query to write, one slow-query diagnosis, an ORM puzzle (the N+1 problem), and a Kafka question about ordering or duplicates.`},
+ {t:`analogy`,h:`The database is the warehouse: it must be organised so the right box is found fast (indexes), and nobody gets half an order (transactions). Kafka is the conveyor belt between departments: it must not drop parcels, and you must cope when a parcel arrives twice.`},
+ {t:`cards`,items:[
+   {h:`Lesson 2: SQL you must write`,b:`Joins, grouping, window functions, and the classic puzzles like "second highest salary".`},
+   {h:`Lesson 3: Indexes and slow queries`,b:`How an index works, why a query ignores it, how to read EXPLAIN, and pagination that does not collapse.`},
+   {h:`Lesson 4: Transactions and locking`,b:`Isolation levels, anomalies, and optimistic versus pessimistic locking, in code.`},
+   {h:`Lesson 5: JPA and Hibernate`,b:`Entity states, lazy loading, the N+1 problem, and the Spring Data habits that avoid trouble.`},
+   {h:`Lesson 6: Kafka basics`,b:`Topics, partitions, consumer groups and what guarantees ordering.`},
+   {h:`Lesson 7: Kafka in practice`,b:`Duplicates, exactly-once, retries, dead-letter topics and the outbox pattern.`},
+   {h:`Lessons 8 and 9`,b:`SQL and JPA questions, then Kafka questions, with full answers.`}]},
+ {t:`remember`,h:`The earlier question bank (lesson 17 of the full course) covers ACID, isolation levels, CAP and idempotency at a high level. This course goes one level deeper and adds the Spring and JPA code around it.`},
+ {t:`check`,q:`A page that listed orders was fast in testing and slow in production with 5 million rows. Name three things you would check, in order.`,a:`First, the query plan (EXPLAIN) to see if it scans the whole table. Second, the indexes that match the filter and sort columns. Third, how it paginates: a large OFFSET gets slower as you go deeper. Also check for an N+1 pattern from the ORM issuing many small queries.`}
+]},
+
+/* ---------- 2 ---------- */
+{id:`lesson-2`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`SQL you must be able to write on the spot`,min:18,
+ promise:`Not syntax trivia. The handful of patterns that cover most interview queries, each with a reason you can explain.`,
+ blocks:[
+ {t:`p`,h:`<h2>The sample tables used below</h2>`},
+ {t:`code`,cap:`employees(id, name, dept_id, salary, manager_id)   departments(id, name)   orders(id, user_id, amount, created_at)`,code:`-- employees
+-- id | name  | dept_id | salary | manager_id
+--  1 | Asha  |   10    | 90000  | NULL
+--  2 | Ravi  |   10    | 70000  | 1
+--  3 | Meera |   20    | 70000  | 1
+--  4 | Karan |   20    | 50000  | 3`},
+ {t:`p`,h:`<h2>Joins in one picture</h2>`},
+ {t:`cards`,items:[
+   {h:`INNER JOIN`,b:`Only rows that match on both sides.`},
+   {h:`LEFT JOIN`,b:`All rows from the left table, plus matches from the right, with NULLs where there is no match. Use it to find "things with no related rows".`},
+   {h:`Self join`,b:`A table joined to itself, for hierarchies such as employee and manager.`}]},
+ {t:`code`,cap:`Pattern 1: find rows with no match (departments with no employees)`,code:`SELECT d.name
+FROM departments d
+LEFT JOIN employees e ON e.dept_id = d.id
+WHERE e.id IS NULL;                      -- no match on the right side`},
+ {t:`code`,cap:`Pattern 2: group and filter groups (WHERE vs HAVING)`,code:`SELECT dept_id, COUNT(*) AS headcount, AVG(salary) AS avg_pay
+FROM employees
+WHERE salary > 40000                     -- filters ROWS, before grouping
+GROUP BY dept_id
+HAVING COUNT(*) >= 2;                    -- filters GROUPS, after grouping`},
+ {t:`code`,cap:`Pattern 3: second highest salary (three ways)`,code:`-- a) subquery
+SELECT MAX(salary) FROM employees
+WHERE salary < (SELECT MAX(salary) FROM employees);
+
+-- b) DENSE_RANK: handles ties and works for the Nth highest
+SELECT salary FROM (
+  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS r FROM employees
+) t WHERE r = 2 LIMIT 1;
+
+-- c) OFFSET
+SELECT DISTINCT salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1;`},
+ {t:`code`,cap:`Pattern 4: top earner per department (window function)`,code:`SELECT dept_id, name, salary FROM (
+  SELECT dept_id, name, salary,
+         ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) AS rn
+  FROM employees
+) t WHERE rn = 1;
+-- ROW_NUMBER: always one row per rank. RANK: ties share a rank and leave gaps. DENSE_RANK: ties share, no gaps.`},
+ {t:`code`,cap:`Pattern 5: find and delete duplicates`,code:`-- find
+SELECT email, COUNT(*) FROM users GROUP BY email HAVING COUNT(*) > 1;
+
+-- delete, keeping the lowest id (MySQL needs the extra derived table)
+DELETE FROM users
+WHERE id NOT IN (SELECT keep_id FROM (SELECT MIN(id) AS keep_id FROM users GROUP BY email) x);`},
+ {t:`code`,cap:`Pattern 6: running total and previous row (window functions)`,code:`SELECT id, created_at, amount,
+       SUM(amount) OVER (ORDER BY created_at) AS running_total,
+       LAG(amount)  OVER (ORDER BY created_at) AS previous_amount
+FROM orders;`},
+ {t:`code`,cap:`Pattern 7: employees earning more than their manager (self join)`,code:`SELECT e.name
+FROM employees e
+JOIN employees m ON e.manager_id = m.id
+WHERE e.salary > m.salary;`},
+ {t:`code`,use:true,cap:`How it is used: running one of these from Spring Data`,code:`public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+
+    // native SQL when a window function is needed (JPQL has none)
+    @Query(value = """
+        SELECT dept_id AS deptId, name, salary FROM (
+          SELECT dept_id, name, salary,
+                 ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) rn
+          FROM employees) t WHERE rn = 1
+        """, nativeQuery = true)
+    List<TopEarner> topEarnerPerDept();
+
+    interface TopEarner { Long getDeptId(); String getName(); Long getSalary(); }  // projection
+}
+// service: repo.topEarnerPerDept().forEach(t -> log.info("{} {}", t.getName(), t.getSalary()));`},
+ {t:`cards`,items:[
+   {h:`NULL traps`,b:`<code>x = NULL</code> is never true. Use <code>IS NULL</code>. <code>NOT IN</code> with a NULL in the list returns nothing. Prefer <code>NOT EXISTS</code>. <code>COUNT(col)</code> skips NULLs, <code>COUNT(*)</code> does not.`},
+   {h:`UNION vs UNION ALL`,b:`UNION removes duplicates and sorts to do it, so it is slower. UNION ALL keeps all rows.`},
+   {h:`DELETE, TRUNCATE, DROP`,b:`DELETE removes chosen rows and can be rolled back and fire triggers. TRUNCATE empties the table quickly. DROP removes the table itself.`},
+   {h:`Order of execution`,b:`FROM and JOIN, then WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT. That is why you cannot use a SELECT alias in WHERE.`}]},
+ {t:`mistake`,h:`Writing the answer silently. In an interview say what you are doing: "I need one row per department, so I will rank within a department." Also state your assumption about ties and NULLs before you type.`},
+ {t:`check`,q:`Why does <code>SELECT * FROM t WHERE id NOT IN (SELECT ref_id FROM u)</code> return no rows when <code>u.ref_id</code> contains a NULL?`,a:`<code>NOT IN</code> expands to <code>id &lt;&gt; v1 AND id &lt;&gt; v2 AND id &lt;&gt; NULL</code>. A comparison with NULL is unknown, so the whole AND is never true. Use <code>NOT EXISTS (SELECT 1 FROM u WHERE u.ref_id = t.id)</code>, or filter NULLs out of the subquery.`}
+]},
+
+/* ---------- 3 ---------- */
+{id:`lesson-3`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`Indexes and slow queries: how to find and fix them`,min:18,
+ promise:`Every experienced candidate is asked "a query is slow, what do you do?". The answer is a method, and it starts with EXPLAIN.`,
+ blocks:[
+ {t:`plain`,h:`An <b>index</b> is a sorted copy of one or more columns, with pointers to the full rows. Without it the database reads every row (a <b>full table scan</b>). With it, the database jumps to the right place, like using a book's index instead of reading every page.`},
+ {t:`analogy`,h:`A phone book sorted by surname. Finding "Kulkarni" is quick. Finding everyone whose <i>first</i> name is "Asha" means reading the whole book, unless there is a second index for first names.`},
+ {t:`cards`,items:[
+   {h:`How it is stored`,b:`Most indexes are <b>B+trees</b>: shallow, sorted trees. Three or four levels can cover millions of rows, so a lookup takes a few reads.`},
+   {h:`Clustered vs secondary`,b:`In MySQL InnoDB the table <i>is</i> the primary key index (clustered). Other indexes point to the primary key. A lookup through a secondary index may need a second step.`},
+   {h:`The price`,b:`Every index makes inserts and updates slower and uses disk. Add the ones your queries need, not one per column.`}]},
+ {t:`p`,h:`<h2>Composite indexes: the leftmost rule</h2>`},
+ {t:`code`,cap:`One index on (dept_id, salary) serves some queries and not others`,code:`CREATE INDEX idx_emp_dept_salary ON employees (dept_id, salary);
+
+-- Uses the index:
+WHERE dept_id = 10
+WHERE dept_id = 10 AND salary > 60000
+WHERE dept_id = 10 ORDER BY salary          -- already sorted, no extra sort step
+
+-- Cannot use it well (skips the leading column):
+WHERE salary > 60000`},
+ {t:`remember`,h:`Put <b>equality columns first</b>, then the <b>range or sort</b> column. A <b>covering index</b> holds every column the query needs, so the database never touches the table at all.`},
+ {t:`p`,h:`<h2>Why a query ignores your index</h2>`},
+ {t:`code`,bad:true,cap:`Four classic reasons`,code:`WHERE DATE(created_at) = '2026-01-15'     -- function on the column
+WHERE name LIKE '%kumar'                   -- leading wildcard
+WHERE phone = 9876543210                   -- phone is VARCHAR: implicit cast on every row
+WHERE status = 'PAID' OR user_id = 7       -- OR across different columns, often a scan`},
+ {t:`code`,good:true,cap:`Rewrites that let the index work`,code:`WHERE created_at >= '2026-01-15' AND created_at < '2026-01-16'   -- plain range on the column
+WHERE name LIKE 'kumar%'                                         -- prefix search
+WHERE phone = '9876543210'                                       -- right type
+-- OR: split into two queries joined with UNION ALL, or add one index per branch`},
+ {t:`p`,h:`<h2>Reading EXPLAIN</h2>`},
+ {t:`code`,use:true,cap:`How it is used: the method for "this query is slow"`,code:`EXPLAIN ANALYZE
+SELECT * FROM orders WHERE user_id = 42 ORDER BY created_at DESC LIMIT 20;
+
+-- Seq Scan on orders  (rows=5,000,000)   <- reading the whole table: bad
+--   Sort  (cost=...)                      <- sorting a big result: bad
+
+CREATE INDEX idx_orders_user_created ON orders (user_id, created_at DESC);
+
+-- Index Scan using idx_orders_user_created  (rows=20)   <- good: a few reads, already ordered`},
+ {t:`steps`,items:[
+   [`Reproduce.`,` Get the real slow query from the slow-query log or APM, with real parameter values.`],
+   [`EXPLAIN.`,` Look for full scans, big sorts, and a huge gap between estimated and actual rows.`],
+   [`Index.`,` Add or change an index to match the filter and order. Check it is used.`],
+   [`Rewrite.`,` Remove functions on columns, select only needed columns, avoid <code>SELECT *</code>.`],
+   [`Reduce the work.`,` Paginate, cache, pre-aggregate, or move reporting to a replica.`],
+   [`Verify.`,` Compare timing before and after, on production-sized data.`]]},
+ {t:`p`,h:`<h2>Pagination that does not collapse</h2>`},
+ {t:`two`,a:{h:`OFFSET pagination`,b:`<code>LIMIT 20 OFFSET 1000000</code> makes the database read and throw away a million rows. Page 50,000 is slow, and rows shift if data changes between pages.`},b:{h:`Keyset (seek) pagination`,b:`Remember the last row seen and ask for rows after it. Cost stays flat on any page. No jumping to "page 50", which is fine for feeds and exports.`}},
+ {t:`code`,use:true,cap:`How it is used: keyset pagination in Spring Data`,code:`// SQL
+SELECT * FROM orders
+WHERE user_id = :uid AND (created_at, id) < (:lastCreated, :lastId)
+ORDER BY created_at DESC, id DESC
+LIMIT 20;
+
+// Repository
+@Query("""
+   SELECT o FROM Order o
+   WHERE o.userId = :uid AND (o.createdAt < :lastCreated OR (o.createdAt = :lastCreated AND o.id < :lastId))
+   ORDER BY o.createdAt DESC, o.id DESC
+   """)
+List<Order> nextPage(long uid, Instant lastCreated, long lastId, Pageable limit20);
+// API: GET /orders?after=2026-01-15T10:00:00Z_9812   -> returns items and the next "after" token`},
+ {t:`mistake`,h:`Adding an index for every slow query without checking. Ten overlapping indexes slow every write and may not even be chosen. Look at what exists first. Also: trusting <code>EXPLAIN</code> on a tiny test database. With 100 rows a full scan is the best plan. Test with production-like data volume.`},
+ {t:`check`,q:`You have an index on <code>(user_id, created_at)</code>. Will <code>WHERE created_at &gt; X ORDER BY created_at</code> use it well?`,a:`Not well. The leading column <code>user_id</code> is not in the filter, so the database cannot use the sorted order of <code>created_at</code>. It would need a separate index starting with <code>created_at</code>, or the query must also filter by <code>user_id</code>.`}
+]},
+
+/* ---------- 4 ---------- */
+{id:`lesson-4`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`Transactions, isolation and locking, in code`,min:16,
+ promise:`What can go wrong when two users touch the same row, and the exact tools to stop it.`,
+ blocks:[
+ {t:`plain`,h:`A <b>transaction</b> groups steps so they all happen or none do (ACID: atomic, consistent, isolated, durable). <b>Isolation</b> is the tricky letter. It answers: how much can one transaction see of another's unfinished work?`},
+ {t:`p`,h:`<h2>The three problems isolation prevents</h2>`},
+ {t:`cards`,items:[
+   {h:`Dirty read`,b:`You read data another transaction has not committed, and it later rolls back.`},
+   {h:`Non-repeatable read`,b:`You read a row twice and get different values because someone committed a change in between.`},
+   {h:`Phantom read`,b:`You run the same range query twice and new rows appear.`}]},
+ {t:`cards`,items:[
+   {h:`READ UNCOMMITTED`,b:`Allows all three. Rarely used.`},
+   {h:`READ COMMITTED`,b:`Stops dirty reads. Default in PostgreSQL, Oracle and SQL Server.`},
+   {h:`REPEATABLE READ`,b:`Stops dirty and non-repeatable reads. Default in MySQL InnoDB, which also limits phantoms.`},
+   {h:`SERIALIZABLE`,b:`Behaves as if transactions ran one at a time. Safest, slowest, can abort transactions.`}]},
+ {t:`p`,h:`<h2>A real problem: two people buy the last item</h2>`},
+ {t:`code`,bad:true,cap:`Lost update: both read stock = 1, both write stock = 0`,code:`@Transactional
+public void buy(long productId) {
+    Product p = repo.findById(productId).orElseThrow();
+    if (p.getStock() < 1) throw new SoldOutException();
+    p.setStock(p.getStock() - 1);        // two requests can both pass the check above
+}`},
+ {t:`p`,h:`<h2>Fix 1: optimistic locking (assume conflicts are rare)</h2>`},
+ {t:`code`,use:true,cap:`How it is used: a @Version column`,code:`@Entity
+class Product {
+    @Id Long id;
+    int stock;
+    @Version long version;       // Hibernate adds "AND version = ?" to every UPDATE and bumps it
+}
+
+// If two transactions update the same row, the second UPDATE affects 0 rows
+// and Hibernate throws ObjectOptimisticLockingFailureException.
+// Caller options: retry the whole operation, or return HTTP 409 Conflict.
+@Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 3)
+@Transactional
+public void buy(long productId) { ... }`},
+ {t:`p`,h:`<h2>Fix 2: pessimistic locking (lock the row while you work)</h2>`},
+ {t:`code`,use:true,cap:`How it is used: SELECT ... FOR UPDATE`,code:`public interface ProductRepository extends JpaRepository<Product, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)                  // becomes SELECT ... FOR UPDATE
+    @Query("select p from Product p where p.id = :id")
+    Optional<Product> findForUpdate(long id);
+}
+
+@Transactional
+public void buy(long productId) {
+    Product p = repo.findForUpdate(productId).orElseThrow();   // others wait here
+    if (p.getStock() < 1) throw new SoldOutException();
+    p.setStock(p.getStock() - 1);
+}   // commit releases the lock`},
+ {t:`p`,h:`<h2>Fix 3: one atomic SQL statement</h2>`},
+ {t:`code`,good:true,cap:`Often the simplest: let the database do the check and the change together`,code:`@Modifying
+@Query("update Product p set p.stock = p.stock - 1 where p.id = :id and p.stock > 0")
+int takeOne(long id);        // returns 1 if it worked, 0 if sold out
+
+// service: if (repo.takeOne(id) == 0) throw new SoldOutException();`},
+ {t:`two`,a:{h:`Optimistic`,b:`No waiting, high throughput when conflicts are rare. The cost is retries when they happen. Good for editing a profile or a document.`},b:{h:`Pessimistic`,b:`Waits instead of retrying. Predictable for hot rows such as stock or account balance. The cost is blocked threads and a risk of deadlock.`}},
+ {t:`remember`,h:`For a hot counter, the atomic <code>UPDATE ... WHERE stock &gt; 0</code> is often the best answer: no lock held across Java code, no version, one round trip. For a distributed set of services it is also the simplest correct option.`},
+ {t:`mistake`,h:`Assuming that <code>@Transactional</code> alone prevents lost updates. It gives you atomicity, not protection against concurrent writers. Under READ COMMITTED, the two transactions above both succeed. You need a version column, a lock or an atomic update.`},
+ {t:`check`,q:`Two transactions each lock a different row first and then try to lock the other's row. What happens in the database?`,a:`A database deadlock. The engine detects the cycle, aborts one transaction as the victim (rolls it back with an error) and lets the other proceed. Your code should be ready to retry. To reduce them, lock rows in a consistent order and keep transactions short.`}
+]},
+
+/* ---------- 5 ---------- */
+{id:`lesson-5`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`JPA and Hibernate: entity states, lazy loading and the N+1 problem`,min:18,
+ promise:`The ORM does a lot behind your back. Learn what it does, and the N+1 problem that every Java interview eventually reaches.`,
+ blocks:[
+ {t:`plain`,h:`<b>JPA</b> is the standard. <b>Hibernate</b> is the implementation behind it. It maps classes to tables, and it keeps a <b>persistence context</b> per transaction: a small in-memory workspace that tracks every entity you loaded, so it can write only the changes at commit.`},
+ {t:`p`,h:`<h2>Entity states</h2>`},
+ {t:`cards`,items:[
+   {h:`Transient`,b:`A plain <code>new</code> object. Hibernate knows nothing about it.`},
+   {h:`Managed`,b:`Loaded or saved inside an open transaction. Changes are tracked and flushed automatically ("dirty checking").`},
+   {h:`Detached`,b:`Was managed, but the session or transaction closed. Changes are no longer tracked.`},
+   {h:`Removed`,b:`Marked for deletion at commit.`}]},
+ {t:`code`,use:true,cap:`How it is used: dirty checking means no save() call is needed`,code:`@Transactional
+public void rename(long id, String newName) {
+    Employee e = repo.findById(id).orElseThrow();   // managed
+    e.setName(newName);                              // just change it
+}   // at commit Hibernate sees the change and runs: UPDATE employees SET name=? WHERE id=?`},
+ {t:`p`,h:`<h2>Lazy loading and its famous error</h2>`},
+ {t:`plain`,h:`Relationships such as <code>order.getItems()</code> are loaded <b>lazily</b>: Hibernate gives you a placeholder and runs the query only when you first touch it. If the transaction has ended by then, you get <code>LazyInitializationException</code>.`},
+ {t:`cards`,items:[
+   {h:`Defaults`,b:`<code>@OneToMany</code> and <code>@ManyToMany</code> are lazy. <code>@ManyToOne</code> and <code>@OneToOne</code> are <b>eager</b> by default. Set them to <code>LAZY</code> explicitly and fetch what you need per query.`},
+   {h:`Open Session in View`,b:`Spring Boot keeps the session open during the web request by default (<code>spring.jpa.open-in-view=true</code>) and logs a warning. It hides lazy errors but lets queries run from the view layer and holds a connection for the whole request. Many teams turn it off.`}]},
+ {t:`p`,h:`<h2>The N+1 problem</h2>`},
+ {t:`diagram`,cap:`One query for the list, then one extra query for each row's relationship. 100 orders become 101 queries.`,d:{w:420,alt:`One query loads orders then one query per order loads items`,nodes:[
+   {id:`a`,t:`1 query`,s:`list query`,x:6,y:24,w:120,m:[`100 orders back`]},
+   {id:`b`,t:`N queries`,s:`one per order`,x:196,y:6,w:210,m:[`items of order 1`,`items of order 2`,`... up to order 100`]}],
+  edges:[{a:`a`,b:`b`,l:`then`}]}},
+ {t:`code`,bad:true,cap:`Looks innocent, fires 101 queries`,code:`List<Order> orders = orderRepo.findAll();              // 1 query
+for (Order o : orders) {
+    total += o.getItems().size();                      // lazy load: 1 more query EACH
+}`},
+ {t:`code`,good:true,cap:`Three fixes, from simplest`,code:`// 1. Fetch join: one query with a JOIN
+@Query("select distinct o from Order o join fetch o.items where o.status = :s")
+List<Order> withItems(String s);
+
+// 2. EntityGraph: same idea, no JPQL string
+@EntityGraph(attributePaths = "items")
+List<Order> findByStatus(String status);
+
+// 3. Batch fetching: loads items for many orders in groups (IN query). Good when join-fetching a list
+//    would multiply rows.  application.yml:
+//    spring.jpa.properties.hibernate.default_batch_fetch_size: 50`},
+ {t:`mistake`,h:`Join-fetching two <b>collections</b> at once. It multiplies rows (a cartesian product) and Hibernate may throw <code>MultipleBagFetchException</code>. Fetch one collection with join fetch, and the other with batch fetching or a second query. Also: pairing <code>join fetch</code> with pagination makes Hibernate page in memory, with a warning.`},
+ {t:`p`,h:`<h2>Habits that avoid trouble</h2>`},
+ {t:`cards`,items:[
+   {h:`Return DTOs`,b:`Do not expose entities from controllers. Use records or projections, so you control exactly what is fetched and serialised.`},
+   {h:`Read-only transactions`,b:`<code>@Transactional(readOnly = true)</code> for queries. Hibernate skips dirty checking, and some drivers route to a replica.`},
+   {h:`Batch writes`,b:`Set <code>hibernate.jdbc.batch_size</code>. Note that <code>GenerationType.IDENTITY</code> disables insert batching, so use a sequence for bulk inserts.`},
+   {h:`equals and hashCode`,b:`Be careful with entities: do not base them on all fields, and do not use a generated id that is null before saving. A business key or a stable id strategy is safer.`},
+   {h:`Show the SQL`,b:`During development set <code>spring.jpa.show-sql=true</code> or log <code>org.hibernate.SQL</code>. You cannot find N+1 if you never look.`}]},
+ {t:`code`,use:true,cap:`How it is used: a projection that fetches only two columns`,code:`public interface OrderSummary { Long getId(); BigDecimal getAmount(); }
+
+List<OrderSummary> findByUserIdOrderByCreatedAtDesc(Long userId);
+// SQL: select id, amount from orders where user_id=? order by created_at desc
+// No entities, no lazy loading, no N+1, and less data over the wire.`},
+ {t:`check`,q:`<code>repo.save(entity)</code> is called on an entity you loaded in the same transaction after changing a field. Is the call needed?`,a:`No. A managed entity is tracked, and the change is written at flush or commit by dirty checking. <code>save</code> is needed for new entities (it calls persist) or for detached ones (it merges). Calling it on a managed entity does no harm, but it is not what triggers the update.`}
+]},
+/* ---------- 6 ---------- */
+{id:`lesson-6`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`Kafka basics: topics, partitions, consumer groups`,min:16,
+ promise:`Kafka questions all rest on one picture. Learn the picture and ordering, scaling and failure answers follow.`,
+ blocks:[
+ {t:`plain`,h:`<b>Kafka</b> is a distributed, append-only <b>log</b>. Producers add messages to the end of a topic. Messages are kept for a set time (default seven days), whether read or not. Consumers read from any position they choose, and each one remembers its own place. It is not a queue that deletes messages once delivered.`},
+ {t:`analogy`,h:`A newspaper archive. The press prints issues in order and never rewrites them. Each reader keeps a bookmark and reads at their own speed. A new reader can start from last week's issue. A slow reader does not slow the press.`},
+ {t:`diagram`,cap:`A topic is split into partitions. Within one consumer group, each partition goes to exactly one consumer.`,d:{w:420,alt:`Producer writes to topic partitions which are read by two consumers in a group`,nodes:[
+   {id:`p`,t:`Producer`,x:6,y:50,w:76,k:`state`},
+   {id:`t`,t:`Topic: orders`,x:110,y:8,w:150,m:[`P0: 0 1 2 3 4`,`P1: 0 1 2`,`P2: 0 1 2 3`]},
+   {id:`c1`,t:`Consumer 1`,x:320,y:8,w:94},
+   {id:`c2`,t:`Consumer 2`,x:320,y:78,w:94}],
+  edges:[{a:`p`,b:`t`,l:`key`},{a:`t`,b:`c1`,l:`P0, P1`,o:-4},{a:`t`,b:`c2`,l:`P2`,o:4}]}},
+ {t:`p`,h:`<h2>The vocabulary</h2>`},
+ {t:`cards`,items:[
+   {h:`Topic`,b:`A named stream of messages, such as <code>orders</code>.`},
+   {h:`Partition`,b:`One ordered slice of a topic. The unit of parallelism and of ordering.`},
+   {h:`Offset`,b:`The position of a message within a partition. Each consumer group stores its own offset per partition.`},
+   {h:`Broker`,b:`A Kafka server. A cluster has several, and each partition lives on a few of them.`},
+   {h:`Replication`,b:`Each partition has a leader and followers (replicas). If the leader fails, an in-sync follower takes over.`},
+   {h:`Consumer group`,b:`Consumers that share the work of a topic. Different groups each get every message.`}]},
+ {t:`remember`,h:`Three facts decide most answers. <b>Order is guaranteed only within one partition.</b> Messages with the same <b>key</b> go to the same partition. In a group, <b>one partition is read by one consumer</b>, so you can never use more consumers than partitions.`},
+ {t:`p`,h:`<h2>What the key does</h2>`},
+ {t:`code`,use:true,cap:`How it is used: all events of one order stay in order`,code:`@Service
+class OrderEvents {
+    private final KafkaTemplate<String, OrderEvent> kafka;
+    OrderEvents(KafkaTemplate<String, OrderEvent> kafka) { this.kafka = kafka; }
+
+    void publish(OrderEvent e) {
+        // key = orderId. hash(key) picks the partition, so CREATED, PAID, SHIPPED for one order
+        // always land in the same partition and are read in that order.
+        kafka.send("orders", e.orderId(), e);
+    }
+}
+
+@Component
+class OrderListener {
+    @KafkaListener(topics = "orders", groupId = "billing")    // billing instances share partitions
+    void on(OrderEvent e) { billing.handle(e); }
+}`},
+ {t:`p`,h:`<h2>Producer settings that decide safety</h2>`},
+ {t:`cards`,items:[
+   {h:`acks`,b:`<code>acks=0</code> do not wait. <code>1</code> leader wrote it. <code>all</code> every in-sync replica wrote it. Use <code>all</code> for important data.`},
+   {h:`min.insync.replicas`,b:`With <code>acks=all</code> and a value of 2, a write needs at least two copies, or it is refused. Together with replication factor 3, you survive one broker loss.`},
+   {h:`Idempotent producer`,b:`<code>enable.idempotence=true</code> stops a retry from creating a duplicate inside Kafka. It is the default in recent clients.`},
+   {h:`Retries and ordering`,b:`Retries can reorder messages unless idempotence is on or in-flight requests are limited to one.`}]},
+ {t:`code`,cap:`A safe producer configuration`,code:`spring:
+  kafka:
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 120000
+        linger.ms: 5          # small wait so messages are batched together
+        compression.type: lz4`},
+ {t:`p`,h:`<h2>Consumers: offsets and rebalances</h2>`},
+ {t:`steps`,items:[
+   [`Poll.`,` The consumer calls <code>poll()</code> and receives a batch of messages.`],
+   [`Process.`,` Your code handles them.`],
+   [`Commit the offset.`,` Tell Kafka "I have finished up to here". If the consumer restarts it resumes from the last committed offset.`],
+   [`Rebalance.`,` When a consumer joins, leaves or stops responding, partitions are reassigned within the group. Reading pauses briefly. If processing takes longer than <code>max.poll.interval.ms</code>, Kafka assumes the consumer is dead and triggers one.`]]},
+ {t:`mistake`,h:`Choosing the number of partitions casually. You can add partitions later, but doing so changes which partition each key hashes to, which breaks the per-key ordering for existing keys. Plan for the throughput you will need, with some headroom, at creation time.`},
+ {t:`check`,q:`A topic has 3 partitions. You deploy 5 instances of a consumer in the same group. What happens to the extra 2?`,a:`They sit idle. Each partition is assigned to only one consumer in a group, so only 3 instances do work. The extras act as hot standbys that take over after a failure. To use more consumers, create more partitions.`}
+]},
+
+/* ---------- 7 ---------- */
+{id:`lesson-7`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`Kafka in practice: duplicates, retries, dead letters and the outbox`,min:18,
+ promise:`Real systems must survive crashes and bad messages. This is the lesson that separates people who have run Kafka from people who have read about it.`,
+ blocks:[
+ {t:`p`,h:`<h2>Delivery guarantees</h2>`},
+ {t:`cards`,items:[
+   {h:`At most once`,b:`Commit the offset first, then process. A crash loses the message. Fine for metrics you can afford to lose.`},
+   {h:`At least once`,b:`Process first, then commit. A crash means the message is processed again. <b>The usual choice.</b> It needs a consumer that tolerates duplicates.`},
+   {h:`Exactly once`,b:`Each message affects the result once. Kafka gives this within Kafka itself using transactions. End to end with a database you still need your own idempotency.`}]},
+ {t:`remember`,h:`The honest answer to "do you support exactly-once?" is: <b>at-least-once delivery plus an idempotent consumer gives exactly-once effect.</b> Kafka transactions help for Kafka to Kafka pipelines, but they cannot make your database write and your offset commit one atomic step.`},
+ {t:`p`,h:`<h2>The idempotent consumer</h2>`},
+ {t:`code`,use:true,cap:`How it is used: a duplicate message does no harm`,code:`@KafkaListener(topics = "payments", groupId = "ledger")
+@Transactional
+void on(PaymentEvent e) {
+    // processed_events has a UNIQUE key on event_id
+    if (processed.existsById(e.eventId())) return;       // already handled: skip
+    ledger.credit(e.accountId(), e.amount());
+    processed.save(new ProcessedEvent(e.eventId()));     // same transaction as the credit
+}
+// Redelivery after a crash hits the early return. Or rely on the unique constraint:
+// insert first, and treat a DuplicateKeyException as "already done".`},
+ {t:`p`,h:`<h2>Failures: retry, then park the message</h2>`},
+ {t:`plain`,h:`Some messages fail forever: bad data, a bug. If the consumer retries one endlessly, everything behind it in that partition is stuck (a <b>poison pill</b>). The standard fix is a few retries with a delay, then move the message to a <b>dead-letter topic</b> (DLT) for a human or a repair job.`},
+ {t:`code`,use:true,cap:`How it is used: Spring Kafka retry and dead-letter topic`,code:`@Bean
+DefaultErrorHandler errorHandler(KafkaTemplate<Object,Object> template) {
+    var dlt = new DeadLetterPublishingRecoverer(template);        // sends to "<topic>.DLT"
+    var backoff = new ExponentialBackOff(500, 2.0);               // 0.5 s, 1 s, 2 s ...
+    backoff.setMaxElapsedTime(10_000);                            // stop retrying after 10 s
+    var handler = new DefaultErrorHandler(dlt, backoff);
+    handler.addNotRetryableExceptions(IllegalArgumentException.class);   // bad data: do not retry
+    return handler;
+}
+// Or per listener: @RetryableTopic(attempts = "4") creates retry topics with delays, then a DLT.
+// Always alert on DLT depth, and keep a way to replay messages once the bug is fixed.`},
+ {t:`p`,h:`<h2>The dual-write problem and the outbox pattern</h2>`},
+ {t:`plain`,h:`You save an order to the database and publish an event to Kafka. Two systems, two writes. If the database commit succeeds and the publish fails, the world never hears about the order. If you publish first and the commit fails, the world hears about an order that does not exist. You cannot make both atomic.`},
+ {t:`diagram`,cap:`Write the event into an outbox table in the same transaction as the order. A separate relay publishes it afterwards.`,d:{w:420,alt:`Service writes order and outbox row in one transaction, a relay reads the outbox and publishes to Kafka`,nodes:[
+   {id:`db`,t:`Database`,x:6,y:12,w:116,m:[`orders row`,`outbox row`,`one transaction`]},
+   {id:`rl`,t:`Relay`,s:`poller or CDC`,x:140,y:30,w:104},
+   {id:`kf`,t:`Kafka`,x:262,y:36,w:60},
+   {id:`cs`,t:`Readers`,x:344,y:36,w:70}],
+  edges:[{a:`db`,b:`rl`},{a:`rl`,b:`kf`},{a:`kf`,b:`cs`}]}},
+ {t:`code`,use:true,cap:`How it is used`,code:`@Transactional
+public void placeOrder(Order o) {
+    orders.save(o);
+    outbox.save(new OutboxEvent("OrderPlaced", o.getId().toString(), toJson(o)));   // same commit
+}
+
+@Scheduled(fixedDelay = 500)
+void relay() {
+    for (OutboxEvent e : outbox.findTop100ByPublishedFalseOrderById()) {
+        kafka.send("orders", e.getKey(), e.getPayload()).join();   // wait for the broker ack
+        e.markPublished();                                         // then flag it
+    }
+}
+// A crash between send and mark means a duplicate. That is fine: consumers are idempotent.
+// Debezium (change-data-capture on the database log) can replace the polling relay.`},
+ {t:`p`,h:`<h2>What to watch in production</h2>`},
+ {t:`cards`,items:[
+   {h:`Consumer lag`,b:`How far the group is behind the newest message. Rising lag means consumers are too slow or stuck. The first metric to alert on.`},
+   {h:`Under-replicated partitions`,b:`Followers falling behind: a broker is struggling.`},
+   {h:`Retention and compaction`,b:`Retention deletes old data by time or size. <b>Log compaction</b> keeps only the latest message per key, good for "current state" topics.`},
+   {h:`Schema changes`,b:`Use a schema registry (Avro or Protobuf) and compatible changes only, so old and new services can both read.`}]},
+ {t:`mistake`,h:`Doing slow work or calling another service inside the listener for a whole batch, so processing exceeds <code>max.poll.interval.ms</code> and triggers a rebalance loop. Keep handling fast, reduce <code>max.poll.records</code>, or hand work to a pool and commit only after it completes.`},
+ {t:`check`,q:`Your consumer crashed after updating the database but before committing the offset. What happens on restart, and how is your design safe?`,a:`Kafka redelivers the message, because the offset was never committed. The database update would happen a second time. The design is safe only if the consumer is idempotent: a processed-event table with a unique key, or an update written so that repeating it changes nothing.`}
+]},
+
+/* ---------- 8 ---------- */
+{id:`lesson-8`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`SQL and JPA questions with full answers`,min:40,
+ promise:`Eleven questions as they are asked. Say the answer first, then open the walk-through.`,
+ blocks:[
+ {t:`qbank`,items:[
+ {n:`Find the Nth highest salary`,tag:`SQL`,where:`One of the most repeated SQL puzzles in Indian service and product interviews`,
+  ask:`Write a query for the second highest salary, then generalise it to Nth. What about ties and no result?`,
+  quality:`Pick the approach that handles ties, and say what you return when there is none.`,
+  steps:[[`Simple.`,` <code>MAX(salary)</code> where salary is below the overall max.`],[`General.`,` <code>DENSE_RANK() OVER (ORDER BY salary DESC)</code> and pick rank N. Ties share a rank, so "second highest" means the second distinct value.`],[`No result.`,` Wrap in a subquery, or use <code>IFNULL</code> / <code>COALESCE</code> to return NULL instead of no rows.`],[`Variants.`,` Per department with <code>PARTITION BY dept_id</code>.`]],
+  code:{cap:`Nth highest, parameterised`,code:`SELECT salary FROM (
+  SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS r FROM employees
+) t WHERE r = :n LIMIT 1;`,use:`// Spring Data native query with :n bound from the method parameter
+@Query(value = "...", nativeQuery = true)
+Optional<Long> nthHighestSalary(@Param("n") int n);`},
+  trade:`LIMIT/OFFSET is shortest but mishandles ties unless you use DISTINCT. DENSE_RANK is clear and general but needs a database with window functions (MySQL 8 and later has them).`,
+  follow:`How would you do it on MySQL 5.7? What is the difference between RANK and DENSE_RANK? How do you speed it up with an index on salary?`},
+ {n:`How do indexes work? When are they not used?`,tag:`SQL`,where:`Asked in nearly every backend round`,
+  ask:`Explain how an index speeds up a query. Give situations where the database ignores it. How do composite indexes behave?`,
+  quality:`B+tree intuition, the leftmost rule, and concrete non-use cases.`,
+  steps:[[`Idea.`,` A sorted B+tree on the column. Lookup is a few reads, not a table scan.`],[`Composite.`,` Usable from the leftmost column onwards. Equality columns first, range or sort last.`],[`Covering.`,` If the index holds every needed column, the table is never read.`],[`Not used.`,` Function on the column, leading wildcard, type mismatch, low selectivity (a boolean flag), a small table, or stale statistics.`],[`Cost.`,` Slower writes and more storage.`]],
+  trade:`More indexes help reads and hurt writes. Pick based on actual query patterns.`,
+  follow:`Clustered versus non-clustered? What is selectivity? How do you find unused indexes?`},
+ {n:`A query is slow in production: what do you do?`,tag:`Performance`,where:`The classic senior scenario question`,
+  ask:`A report endpoint went from 200 ms to 8 seconds over two months. Walk me through diagnosis.`,
+  quality:`A method with named steps, not a list of tricks.`,
+  steps:[[`Locate.`,` Slow-query log or APM shows the exact statement and parameters.`],[`Plan.`,` <code>EXPLAIN ANALYZE</code>: scans, sorts, estimated versus actual rows.`],[`What changed.`,` Data grew, so a plan that worked on small data stopped working. Check statistics and indexes.`],[`Fix.`,` Add or adjust an index, rewrite the query, avoid <code>SELECT *</code>, fix N+1.`],[`Reduce work.`,` Paginate, cache, pre-aggregate, or read from a replica.`],[`Verify and guard.`,` Re-test on production-sized data and add an alert on query time.`]],
+  trade:`Caching adds staleness. A summary table adds write complexity. Choose the smallest fix that meets the target.`,
+  follow:`What if EXPLAIN looks fine but it is still slow? (locks, network, connection pool, or the application) How do you index a table without blocking writes?`},
+ {n:`What is the N+1 problem in Hibernate?`,tag:`JPA`,where:`Appears in almost every Spring Data JPA interview`,
+  ask:`What is the N+1 select problem? How do you detect and fix it?`,
+  quality:`Define it, give detection, then more than one fix and the catch of each.`,
+  steps:[[`Define.`,` One query loads N parents. Touching a lazy relationship then fires one query per parent: N+1 in total.`],[`Detect.`,` Log the SQL (<code>org.hibernate.SQL</code>), count queries in tests, or use a query-counting library.`],[`Fix 1.`,` <code>join fetch</code> or <code>@EntityGraph</code>: one query.`],[`Fix 2.`,` Batch fetching with <code>default_batch_fetch_size</code>: a few <code>IN</code> queries.`],[`Fix 3.`,` A DTO projection that selects only what you need.`]],
+  trade:`Join fetch on a collection multiplies rows and conflicts with pagination. Batch fetching is safe with paging.`,
+  follow:`What is MultipleBagFetchException? Why does join fetch with paging warn? Is EAGER a fix? (no: it just does it always)`},
+ {n:`Isolation levels and anomalies`,tag:`Transactions`,where:`Core database theory, asked in many forms`,
+  ask:`Explain isolation levels. Which anomalies does each prevent? What do MySQL and PostgreSQL default to?`,
+  quality:`The grid of level versus anomaly, defaults, and an example.`,
+  steps:[[`Anomalies.`,` Dirty read, non-repeatable read, phantom read.`],[`Levels.`,` READ UNCOMMITTED allows all. READ COMMITTED stops dirty reads. REPEATABLE READ also stops non-repeatable reads. SERIALIZABLE stops phantoms too.`],[`Defaults.`,` PostgreSQL: READ COMMITTED. MySQL InnoDB: REPEATABLE READ.`],[`How it is done.`,` Most engines use MVCC (snapshots) rather than only locks, so readers do not block writers.`],[`Spring.`,` <code>@Transactional(isolation = Isolation.SERIALIZABLE)</code> for a specific method.`]],
+  trade:`Higher isolation means more conflicts and retries. Choose the lowest level that protects the invariant.`,
+  follow:`What is MVCC? What is write skew? Does REPEATABLE READ stop lost updates in PostgreSQL?`},
+ {n:`Optimistic vs pessimistic locking`,tag:`Transactions`,where:`Typical in banking, booking and inventory designs`,
+  ask:`Two users buy the last item at the same time. How do you stop overselling?`,
+  quality:`Show three options and a reasoned pick.`,
+  steps:[[`Name the bug.`,` A lost update: both read stock 1, both write 0.`],[`Atomic update.`,` <code>UPDATE ... SET stock = stock - 1 WHERE id = ? AND stock &gt; 0</code>, and check the rows affected.`],[`Optimistic.`,` A <code>@Version</code> column. A conflicting writer fails and retries.`],[`Pessimistic.`,` <code>SELECT ... FOR UPDATE</code> so the second waits.`],[`Pick.`,` For a hot row like stock, the atomic update. For editing documents, optimistic.`]],
+  trade:`Optimistic costs retries under contention. Pessimistic costs blocked threads and deadlock risk.`,
+  follow:`How does this change with multiple application instances? (database enforces it, so it still works) What about a flash sale with 100,000 buyers?`},
+ {n:`Pagination on a huge table`,tag:`Performance`,where:`Follows any list or feed design`,
+  ask:`How do you page through a table of 100 million rows?`,
+  quality:`Know why OFFSET fails and what to use.`,
+  steps:[[`Problem.`,` Large OFFSET reads and discards rows, so deep pages get slower. Rows shift between requests.`],[`Keyset.`,` Filter on the last seen sort key and limit. Flat cost per page.`],[`Index.`,` It must match the order: (created_at, id).`],[`Trade.`,` No "jump to page N". Return a next-page token.`],[`Exports.`,` Stream in chunks with a cursor, not a single query.`]],
+  trade:`Keyset needs a stable, unique sort key. OFFSET is simpler for small admin tables.`,
+  follow:`How do you handle sorting by a non-unique column? How would you give a total count cheaply? (approximate, or cached)`},
+ {n:`Rapid fire: WHERE vs HAVING, DELETE vs TRUNCATE, UNION vs UNION ALL`,tag:`SQL`,where:`Warm-up questions`,
+  ask:`Answer each in one or two sentences.`,
+  quality:`Short, correct, with the reason.`,
+  steps:[[`WHERE vs HAVING.`,` WHERE filters rows before grouping. HAVING filters groups after aggregation.`],[`DELETE vs TRUNCATE vs DROP.`,` DELETE removes selected rows and can be rolled back and fire triggers. TRUNCATE empties the table fast and resets identity. DROP removes the table.`],[`UNION vs UNION ALL.`,` UNION removes duplicates, which costs a sort. UNION ALL keeps everything and is faster.`],[`Primary vs unique key.`,` A table has one primary key and it cannot be NULL. It can have many unique keys.`],[`INNER vs LEFT JOIN.`,` INNER keeps only matches. LEFT keeps every left row, with NULLs for no match.`]],
+  trade:`Be brief here and save time for the deeper questions.`,
+  follow:`Can you have two primary keys? What is a foreign key constraint and what does ON DELETE CASCADE do?`},
+ {n:`Entity states, lazy loading and LazyInitializationException`,tag:`JPA`,where:`Common in Spring Data JPA rounds`,
+  ask:`What are JPA entity states? Why do you get LazyInitializationException and how do you fix it properly?`,
+  quality:`State machine, then the real cause and the clean fix.`,
+  steps:[[`States.`,` Transient, managed, detached, removed.`],[`Cause.`,` A lazy relationship is touched after the session closed, so Hibernate cannot load it.`],[`Bad fixes.`,` Switching to EAGER everywhere, or keeping the session open for the whole web request.`],[`Good fixes.`,` Fetch what you need inside the service with join fetch or an entity graph, or return a DTO built inside the transaction.`],[`Habit.`,` Never return entities from controllers.`]],
+  trade:`DTOs mean more classes but you control the queries and the JSON.`,
+  follow:`What does open-in-view do? What does merge do versus persist?`},
+ {n:`Prevent duplicate orders when a client retries`,tag:`Design`,where:`Payments and e-commerce interviews`,
+  ask:`A mobile client times out and retries a create-order call. How do you avoid creating two orders?`,
+  quality:`Idempotency key plus a database constraint, not just a check.`,
+  steps:[[`Client sends a key.`,` An <code>Idempotency-Key</code> header, one value per user action.`],[`Server stores it.`,` A table with a <b>unique</b> constraint on (user, key) and the stored response.`],[`Insert first.`,` In the same transaction as the order. A duplicate key error means "already done".`],[`Return the same answer.`,` Reply with the stored response for repeats.`],[`Expiry.`,` Keep keys for a day or two, then clean up.`]],
+  code:{cap:`Unique constraint does the real work`,code:`CREATE TABLE idempotency (
+  user_id BIGINT NOT NULL, idem_key VARCHAR(64) NOT NULL, order_id BIGINT, response JSON,
+  PRIMARY KEY (user_id, idem_key)
+);`,use:`@Transactional
+public OrderView create(long userId, String key, CreateOrder req) {
+    try { idem.insert(userId, key); }                         // unique violation if repeated
+    catch (DuplicateKeyException e) { return idem.storedResponse(userId, key); }
+    Order o = orders.save(Order.from(req));
+    idem.complete(userId, key, o);
+    return OrderView.of(o);
+}`},
+  trade:`A check-then-insert without a constraint has a race. The constraint is the guarantee.`,
+  follow:`What if the first request is still in progress? (return 409 or wait) How does this relate to payment gateways?`},
+ {n:`Normalisation and when to denormalise`,tag:`Design`,where:`Schema design discussions`,
+  ask:`Why normalise? When would you deliberately store duplicate data?`,
+  quality:`Know the reason for each, and the cost of denormalising.`,
+  steps:[[`Normalise.`,` Each fact lives in one place, so updates cannot disagree. Avoid update, insert and delete anomalies.`],[`Cost.`,` More joins for reads.`],[`Denormalise.`,` Copy data to speed reads: a stored order total, a snapshot of the product name and price at purchase time.`],[`Snapshots are correct, not duplicates.`,` The price at order time must not change when the catalogue price does.`],[`Keep it consistent.`,` Update copies in the same transaction or through events, and know which copy is the source of truth.`]],
+  trade:`Read speed against write complexity and risk of drift.`,
+  follow:`Where would you use a read model or a search index? What are 1NF, 2NF and 3NF in a sentence?`}
+ ]}
+ ]},
+
+/* ---------- 9 ---------- */
+{id:`lesson-9`,track:`data`,trackName:`SQL, JPA and Kafka`,title:`Kafka questions with full answers`,min:40,
+ promise:`Ten questions as they are asked, with the follow-ups to expect.`,
+ blocks:[
+ {t:`qbank`,items:[
+ {n:`How does Kafka work, and why is it fast?`,tag:`Kafka`,where:`Opening question in nearly every Kafka round`,
+  ask:`Explain topics, partitions, offsets and consumer groups. Why can Kafka handle such high throughput?`,
+  quality:`The model first, then the performance reasons.`,
+  steps:[[`Model.`,` A topic is split into partitions. Each partition is an ordered, append-only log. A message has an offset.`],[`Consumers.`,` A group shares partitions. Each group tracks its own offsets, so many groups can read the same data.`],[`Replication.`,` Each partition has a leader and followers.`],[`Speed.`,` Sequential disk writes, the OS page cache, batching, compression and zero-copy transfer from disk to network.`],[`Scale.`,` More partitions and brokers spread the load.`]],
+  trade:`Strong throughput and durability. In return, per-message operations such as priorities or individual acknowledgement are not built in.`,
+  follow:`What is zero-copy? What is ISR? What replaced ZooKeeper? (KRaft)`},
+ {n:`What does Kafka guarantee about ordering?`,tag:`Kafka`,where:`Very common, often with an order or payment example`,
+  ask:`Do messages arrive in order? How do you keep events for one order in sequence?`,
+  quality:`Order within a partition only, and how keys give it.`,
+  steps:[[`Rule.`,` Order is guaranteed only inside one partition.`],[`Keys.`,` The same key always maps to the same partition (hash), so use the entity id as the key.`],[`Consumers.`,` One consumer in a group reads a partition, so the order is kept on the consumer side too.`],[`Threats.`,` Producer retries without idempotence, adding partitions, or processing messages in parallel threads inside a consumer.`]],
+  trade:`Strict global order means one partition and no scaling. Per-key order scales.`,
+  follow:`What happens to ordering when you add partitions? How do you process in parallel and keep per-key order?`},
+ {n:`At-most-once, at-least-once and exactly-once`,tag:`Kafka`,where:`A staple, with the exactly-once debate`,
+  ask:`Which delivery guarantee do you use? Does Kafka really support exactly-once?`,
+  quality:`Be honest about the limits.`,
+  steps:[[`At most once.`,` Commit then process. May lose messages.`],[`At least once.`,` Process then commit. May duplicate. The common default.`],[`Exactly once in Kafka.`,` Idempotent producer plus transactions plus <code>isolation.level=read_committed</code> for consume-process-produce between topics.`],[`Beyond Kafka.`,` A database write cannot join that transaction, so use an idempotent consumer.`],[`Message.`,` At-least-once delivery plus idempotent processing gives an exactly-once effect.`]],
+  trade:`Transactions add latency and complexity. Idempotent consumers are simple and portable.`,
+  follow:`What is transactional.id? How do you make a REST call inside a consumer idempotent? (pass the event id as an idempotency key)`},
+ {n:`Producer durability settings`,tag:`Kafka`,where:`Asked to test production experience`,
+  ask:`How do you configure Kafka so that a committed message is never lost?`,
+  quality:`The three settings together.`,
+  steps:[[`Replication.`,` Replication factor 3.`],[`Acks.`,` <code>acks=all</code>, so all in-sync replicas confirm.`],[`Minimum copies.`,` <code>min.insync.replicas=2</code>, so a write fails rather than land on one copy.`],[`Safe retries.`,` <code>enable.idempotence=true</code>.`],[`No unclean election.`,` <code>unclean.leader.election.enable=false</code>.`]],
+  trade:`Safer settings add write latency and reduce availability when brokers are down.`,
+  follow:`What happens with acks=all and only one replica alive? How does throughput change with batching and compression?`},
+ {n:`Consumer rebalancing and lag`,tag:`Kafka`,where:`Operations-minded rounds`,
+  ask:`Your consumer group keeps rebalancing and lag grows. What do you check?`,
+  quality:`Know the timeouts and the usual cause: slow processing.`,
+  steps:[[`Rebalance cause.`,` A consumer joined, left, crashed, or did not call <code>poll</code> within <code>max.poll.interval.ms</code>.`],[`Slow processing.`,` The most common cause. Reduce <code>max.poll.records</code>, speed up handling, or raise the interval.`],[`Heartbeats.`,` Check <code>session.timeout.ms</code> and GC pauses that look like a dead consumer.`],[`Reduce impact.`,` Cooperative sticky assignment avoids stopping all consumers. Static group membership avoids rebalances on restarts.`],[`Lag.`,` Measure lag per partition. A single hot partition points to a skewed key.`]],
+  trade:`Raising timeouts hides failures longer. Fixing slow handling is the real cure.`,
+  follow:`What is a hot partition? How do you scale consumers? What is the difference between eager and cooperative rebalancing?`},
+ {n:`Retries and the dead-letter topic`,tag:`Kafka`,where:`Frequently asked with Spring Kafka`,
+  ask:`A message keeps failing. How do you stop it blocking the partition, and not lose it?`,
+  quality:`Bounded retries with back-off, then a DLT, plus replay.`,
+  steps:[[`Classify.`,` Transient errors (network) deserve a retry. Permanent errors (bad data) do not.`],[`Back-off.`,` Retry a few times with exponential delay.`],[`Park.`,` Publish to a dead-letter topic with the error details in headers.`],[`Alert and replay.`,` Alert on DLT depth. Provide a tool to replay after the fix.`],[`Spring.`,` <code>DefaultErrorHandler</code> with <code>DeadLetterPublishingRecoverer</code>, or <code>@RetryableTopic</code>.`]],
+  trade:`Retry topics keep the main partition moving but break strict ordering for retried messages.`,
+  follow:`What about deserialisation errors? (use ErrorHandlingDeserializer) How do you keep order during retries?`},
+ {n:`The outbox pattern`,tag:`Design`,where:`Asked after any event-driven microservice design`,
+  ask:`How do you update your database and publish an event reliably?`,
+  quality:`Name the dual-write problem and the outbox solution.`,
+  steps:[[`Problem.`,` Two systems cannot commit atomically, so one may succeed and the other fail.`],[`Outbox.`,` Save the event in an outbox table in the same transaction as the business change.`],[`Relay.`,` A poller or Debezium reads new rows and publishes to Kafka, then marks them sent.`],[`Duplicates.`,` The relay can publish twice after a crash, so consumers must be idempotent.`],[`Alternative.`,` Saga and compensation for multi-service flows.`]],
+  trade:`Extra table and a relay to operate, in return for no lost or phantom events.`,
+  follow:`Polling versus change-data-capture? How do you keep outbox events ordered? How do you clean the table?`},
+ {n:`Kafka vs RabbitMQ (and when not to use Kafka)`,tag:`Design`,where:`A common comparison in design rounds`,
+  ask:`When would you pick Kafka over a traditional message broker?`,
+  quality:`Log versus queue, with a decision rule.`,
+  steps:[[`Kafka.`,` A durable log. Consumers pull and keep offsets. Replay is possible. Very high throughput. Ordering per partition.`],[`RabbitMQ.`,` A broker that pushes messages to queues and deletes them once acknowledged. Flexible routing, per-message acknowledgement, priorities, delays.`],[`Pick Kafka.`,` Event streaming, many consumers of the same data, replay, analytics, very high volume.`],[`Pick a queue.`,` Task distribution with routing rules, request-reply, low volume and complex routing.`],[`Not Kafka.`,` A small job queue where simple is enough, such as a database-backed queue or SQS.`]],
+  trade:`Kafka costs operational effort. A simple queue is cheaper to run for simple needs.`,
+  follow:`Where do SQS and Pub/Sub fit? Can Kafka do delayed messages? (not natively)`},
+ {n:`How many partitions and consumers?`,tag:`Kafka`,where:`Capacity and design questions`,
+  ask:`You expect 50,000 messages per second. How do you size the topic and consumers?`,
+  quality:`Work from throughput per consumer, with headroom and key skew in mind.`,
+  steps:[[`Per-consumer rate.`,` Measure how many messages one consumer handles per second, for example 2,000.`],[`Minimum partitions.`,` 50,000 / 2,000 = 25. Add headroom for growth and spikes, for example 48.`],[`Consumers.`,` Up to one per partition. Never more.`],[`Key skew.`,` A popular key creates a hot partition. Pick a well-spread key.`],[`Brokers.`,` Spread partitions and replicas, and check network and disk limits.`]],
+  trade:`Too many partitions increase broker load, recovery time and rebalance cost.`,
+  follow:`How does replication factor change storage needs? What if one customer sends 30 percent of the traffic?`},
+ {n:`Retention, compaction and replay`,tag:`Kafka`,where:`Common in data and event-sourcing discussions`,
+  ask:`How long does Kafka keep messages? What is log compaction? When can you replay?`,
+  quality:`Distinguish time-based retention from compaction.`,
+  steps:[[`Retention.`,` Messages are deleted after a time (default 7 days) or size limit, whether or not they were read.`],[`Compaction.`,` Keeps only the latest message per key. Good for current state such as the latest customer profile.`],[`Replay.`,` A consumer can reset its offset to re-read anything still retained. Useful after a bug fix or to build a new read model.`],[`Limits.`,` Cannot replay what has expired. Keep data longer or archive to object storage.`]],
+  trade:`Longer retention costs disk. Compaction cannot give you history.`,
+  follow:`How do you reset offsets for a group? How do tombstones delete a key in a compacted topic?`}
+ ]},
+ {t:`p`,h:`<h2>Where this came from</h2><p>Topics were drawn from current SQL optimisation, Spring Data JPA and Kafka interview guides for experienced developers. They are general, not Pune-specific, and written with the settings that exist in recent Kafka and Spring versions.</p>`},
+ {t:`links`,items:[
+  [`SQL query optimization interview questions: EXPLAIN plans, joins and indexes, prachub`,`https://prachub.com/resources/sql-query-optimization-interview-questions-explain-plans-joins-and-indexes`],
+  [`SQL performance tuning interview questions, DbVisualizer`,`https://www.dbvis.com/thetable/top-sql-performance-tuning-interview-questions-and-answers/`],
+  [`What is the N+1 problem in Hibernate and JPA, DEV Community`,`https://dev.to/tapaspal/what-is-the-n1-problem-in-hibernatejpa-how-to-resolve-it-interview-qa-8io`],
+  [`Kafka interview questions that separate users from operators, techinterview.org`,`https://www.techinterview.org/post/3233477380/kafka-interview-questions/`],
+  [`How Kafka partitions and delivery guarantees show up in interviews`,`https://www.techinterview.org/post/3233476148/kafka-partitions-consumer-groups-delivery-guarantees-interview/`],
+  [`Top 40 Kafka interview questions and answers 2026`,`https://kindatechnical.com/kafka-streams/top-40-kafka-interview-questions-and-answers-2026.html`],
+  [`30 advanced Apache Kafka interview questions, Second Talent`,`https://secondtalent.com/?p=31692`]]}
+]}
+
+];
+
+/* ================= RENDER ================= */
+var STAGES=[
+ {l:'1 server',hurt:'Nothing yet.',fix:'One app server and one database is a perfectly good start. Spend your effort on a clean data model and the right indexes.',cost:'None, and that is the point. Every extra part is something to run and debug.'},
+ {l:'Slow queries',hurt:'Pages slow down because the app and database share one machine, and some queries scan whole tables.',fix:'Add indexes. Move the database to its own machine. Use a bigger machine if needed.',cost:'A bigger machine has a ceiling, and one failure still takes everything down.'},
+ {l:'Read-heavy',hurt:'The database is busy answering the same read questions again and again.',fix:'Add a cache for popular data. Add read replicas (copies for reading).',cost:'Data can be slightly stale. You now have to decide when to refresh the cache.'},
+ {l:'One server is not enough',hurt:'One app server cannot take the traffic, and if it dies, the site is down.',fix:'Run several identical app servers behind a load balancer. Keep them stateless, so any server can handle any request.',cost:'You must move user sessions out of server memory, and handle deployments carefully.'},
+ {l:'Slow work blocks users',hurt:'Sending emails or making reports makes users wait. Spikes of traffic can overwhelm the database.',fix:'Put slow work on a queue and let workers process it in the background.',cost:'Duplicates can happen, so workers must be safe to run twice. Users see "pending" for a while.'},
+ {l:'Data too big',hurt:'One database cannot hold all the data or take all the writes.',fix:'Split the data across several databases by a key, such as user id. This is sharding.',cost:'Queries across shards are hard, and a popular key can overload one shard.'},
+ {l:'Global users',hurt:'Users far from your servers get slow responses, and one data-center outage takes everyone down.',fix:'Serve static files from a CDN. Run in more than one region and route users to the nearest one.',cost:'Data in different regions can briefly disagree, and the bill grows a lot.'}
+];
+
+function el(tag,cls,html){var e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+
+function fmt(n){
+  if(n>=1e9)return (n/1e9).toFixed(1)+' B';
+  if(n>=1e6)return (n/1e6).toFixed(1)+' M';
+  if(n>=1e3)return (n/1e3).toFixed(1)+' K';
+  return n<10?n.toFixed(1):String(Math.round(n));
+}
+function fmtBytes(n){var u=['B','KB','MB','GB','TB','PB'],i=0;while(n>=1000&&i<u.length-1){n/=1000;i++}return (n<10?n.toFixed(1):Math.round(n))+' '+u[i]}
+
+function renderBlock(b,host){
+  var n;
+  switch(b.t){
+  case 'p': host.appendChild(el('div','sec',b.h));break;
+  case 'plain': n=el('div','box');n.appendChild(el('div','label','In plain words'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'analogy': n=el('div','box plain');n.appendChild(el('div','label','Picture it'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'mistake': n=el('div','box mistake');n.appendChild(el('div','label','Common mistake'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'remember': n=el('div','box remember');n.appendChild(el('div','label','Remember this'));n.appendChild(el('p',null,b.h));host.appendChild(n);break;
+  case 'steps':
+    n=el('ol','steps');
+    b.items.forEach(function(s){var li=el('li',null,'<div><b>'+s[0]+'</b>'+s[1]+'</div>');n.appendChild(li)});
+    host.appendChild(n);break;
+  case 'two':
+    n=el('div','two');
+    [b.a,b.b].forEach(function(x){n.appendChild(el('div',null,'<div class="h">'+x.h+'</div><p>'+x.b+'</p>'))});
+    host.appendChild(n);break;
+  case 'cards':
+    n=el('div','cards');
+    b.items.forEach(function(c){
+      n.appendChild(el('div','card','<h3>'+c.h+'</h3>'+(c.pic?'<div class="pic">'+c.pic+'</div>':'')+'<p>'+c.b+'</p>'+(c.small?'<p class="small">'+c.small+'</p>':'')));
+    });
+    host.appendChild(n);break;
+  case 'code':
+    n=el('div','sec');
+    var cap=el('div','cap'+(b.bad?' bad':'')+(b.good?' good':''),b.cap||'');
+    if(b.use)cap.className+=' use';
+    var pre=document.createElement('pre');pre.textContent=b.code;if(b.use)pre.className='use';
+    n.appendChild(cap);n.appendChild(pre);host.appendChild(n);break;
+  case 'check':
+    n=el('div','check');
+    n.appendChild(el('div','label','Check yourself'));
+    n.appendChild(el('p','q',b.q));
+    var btn=el('button','reveal','Think, then show the answer');btn.type='button';
+    var ans=el('div','ans',b.a);ans.hidden=true;
+    btn.addEventListener('click',function(){ans.hidden=!ans.hidden;btn.textContent=ans.hidden?'Think, then show the answer':'Hide the answer'});
+    n.appendChild(btn);n.appendChild(ans);host.appendChild(n);break;
+  case 'qbank': host.appendChild(buildQbank(b.items));break;
+  case 'diagram': host.appendChild(buildDiagram(b));break;
+  case 'links':
+    n=el('div','links');
+    b.items.forEach(function(x){var a=document.createElement('a');a.href=x[1];a.target='_blank';a.rel='noopener noreferrer';a.textContent=x[0];n.appendChild(a)});
+    host.appendChild(n);break;
+  case 'calc': host.appendChild(buildCalc());break;
+  case 'stages': host.appendChild(buildStages());break;
+  case 'drill': host.appendChild(buildDrill());break;
+  }
+}
+
+function buildCalc(){
+  var box=el('div','check');
+  box.appendChild(el('div','label','Try it'));
+  box.appendChild(el('p',null,'Change the numbers and watch what moves. Start with the example from above.'));
+  box.appendChild(el('div','fields',
+    '<div class="field"><label for="c-dau">Daily users (millions)</label><input id="c-dau" type="number" min="0" step="any" value="10"></div>'+
+    '<div class="field"><label for="c-act">Actions per user per day</label><input id="c-act" type="number" min="0" step="any" value="20"></div>'+
+    '<div class="field"><label for="c-rpw">Reads for every 1 write</label><input id="c-rpw" type="number" min="0" step="any" value="10"></div>'));
+  var out=el('div','out');out.setAttribute('aria-live','polite');box.appendChild(out);
+  var msg=el('div','box');box.appendChild(msg);
+  function num(id){var v=parseFloat(box.querySelector(id).value);return isFinite(v)&&v>=0?v:0}
+  function run(){
+    var dau=num('#c-dau')*1e6,act=num('#c-act'),rpw=num('#c-rpw');
+    var day=dau*act,avg=day/86400,pk=avg*3,w=pk/(rpw+1),r=pk-w;
+    var data=day/(rpw+1)*1000*365;
+    out.innerHTML=
+      '<div><span>Requests per day</span><b>'+fmt(day)+'</b></div>'+
+      '<div><span>Average per second</span><b>'+fmt(avg)+'</b></div>'+
+      '<div><span>Busy-hour per second (x3)</span><b>'+fmt(pk)+'</b></div>'+
+      '<div><span>Reads per second at peak</span><b>'+fmt(r)+'</b></div>'+
+      '<div><span>Writes per second at peak</span><b>'+fmt(w)+'</b></div>'+
+      '<div><span>New data per year (1 KB per write)</span><b>'+fmtBytes(data)+'</b></div>';
+    var m;
+    if(r<1000&&w<500)m='<b>What this means:</b> one well-tuned database can handle this. Keep it simple.';
+    else if(r<10000)m='<b>What this means:</b> reads are the pressure. Add a cache and maybe read replicas.';
+    else m='<b>What this means:</b> reads are very high. You need a cache layer, and likely a CDN for static files.';
+    if(w>=5000)m+=' Writes are high too, so think about a queue and splitting the data.';
+    msg.innerHTML='<p>'+m+'</p>';
+  }
+  box.addEventListener('input',run);run();
+  return box;
+}
+
+function buildStages(){
+  var wrap=el('div','sec'),sel=2;
+  var row=el('div','row');wrap.appendChild(row);
+  var panel=el('div','check');panel.setAttribute('aria-live','polite');wrap.appendChild(panel);
+  function draw(){
+    Array.prototype.forEach.call(row.children,function(b,i){b.setAttribute('aria-pressed',i===sel?'true':'false')});
+    var s=STAGES[sel];
+    panel.innerHTML='<div><div class="label">What hurts</div><p>'+s.hurt+'</p></div>'+
+      '<div><div class="label">The fix</div><p>'+s.fix+'</p></div>'+
+      '<div><div class="label">What the fix costs</div><p>'+s.cost+'</p></div>';
+  }
+  STAGES.forEach(function(s,i){
+    var b=el('button','stage',s.l);b.type='button';
+    b.addEventListener('click',function(){sel=i;draw()});row.appendChild(b);
+  });
+  draw();return wrap;
+}
+
+function buildDiagram(b){
+  var spec=b.d,NS='http://www.w3.org/2000/svg';
+  function s(tag,attrs,text){var e=document.createElementNS(NS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;return e}
+  var W=spec.w||420,byId={};
+  spec.nodes.forEach(function(n){
+    var hdr=n.k==='state'?34:(n.k==='note'?0:(n.s?38:28));
+    var ml=n.m?n.m.length:0;
+    if(n.k==='state')n.h=34;
+    else if(n.k==='note')n.h=ml*14+14;
+    else n.h=hdr+(ml?10+14*ml:0);
+    n.hdr=hdr;byId[n.id]=n;
+  });
+  var H=0;spec.nodes.forEach(function(n){H=Math.max(H,n.y+n.h)});H+=14;
+  var svg=s('svg',{viewBox:'0 0 '+W+' '+H,role:'img','aria-label':spec.alt||''});
+  var defs=s('defs',{});
+  function marker(id,w,h,rx,ry,child){
+    var m=s('marker',{id:id,viewBox:'0 0 '+w+' '+h,refX:rx,refY:ry,markerWidth:w,markerHeight:h,markerUnits:'userSpaceOnUse',orient:'auto'});
+    m.appendChild(child);defs.appendChild(m);
+  }
+  var uid='m'+Math.floor(Math.random()*1e6);
+  marker(uid+'t',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-tri'}));
+  marker(uid+'o',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11','class':'mk-open'}));
+  marker(uid+'f',12,12,11,6,s('path',{d:'M1,1 L11,6 L1,11 z','class':'mk-fill'}));
+  marker(uid+'d',14,12,0,6,s('path',{d:'M1,6 L7,1 L13,6 L7,11 z','class':'mk-tri'}));
+  svg.appendChild(defs);
+  function clip(n,tx,ty){
+    var cx=n.x+n.w/2,cy=n.y+n.h/2,dx=tx-cx,dy=ty-cy;
+    if(dx===0&&dy===0)return [cx,cy];
+    var t=Math.min(dx!==0?(n.w/2)/Math.abs(dx):1e9,dy!==0?(n.h/2)/Math.abs(dy):1e9);
+    return [cx+dx*t,cy+dy*t];
+  }
+  spec.edges.forEach(function(e){
+    var A=byId[e.a],B=byId[e.b];
+    var ax=A.x+A.w/2,ay=A.y+A.h/2,bx=B.x+B.w/2,by=B.y+B.h/2;
+    var dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy)||1,o=e.o||0;
+    var nx=-dy/len*o,ny=dx/len*o;
+    var p1=clip(A,bx+nx,by+ny),p2=clip(B,ax+nx,ay+ny);
+    p1=[p1[0]+nx,p1[1]+ny];p2=[p2[0]+nx,p2[1]+ny];
+    var k=e.k||'arrow',dash=(k==='implements'||k==='uses');
+    var line=s('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],'class':'dg-e'+(dash?' dash':'')});
+    if(k==='extends'||k==='implements')line.setAttribute('marker-end','url(#'+uid+'t)');
+    else if(k==='uses')line.setAttribute('marker-end','url(#'+uid+'o)');
+    else if(k==='has'){line.setAttribute('marker-start','url(#'+uid+'d)');line.setAttribute('marker-end','url(#'+uid+'o)')}
+    else line.setAttribute('marker-end','url(#'+uid+'f)');
+    svg.appendChild(line);
+    if(e.l){
+      var mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2,lw=e.l.length*5.6+10;
+      svg.appendChild(s('rect',{x:mx-lw/2,y:my-8,width:lw,height:15,rx:3,'class':'dg-lb'}));
+      svg.appendChild(s('text',{x:mx,y:my+3.5,'class':'dg-l'},e.l));
+    }
+  });
+  spec.nodes.forEach(function(n){
+    var cls=n.k==='iface'?'dg-if':(n.k==='state'?'dg-st':(n.k==='note'?'dg-note':'dg-box'));
+    svg.appendChild(s('rect',{x:n.x,y:n.y,width:n.w,height:n.h,rx:n.k==='state'?17:6,'class':cls}));
+    if(n.k==='note'){
+      (n.m||[]).forEach(function(l,i){svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+16+i*14,'class':'dg-n'},l))});
+      return;
+    }
+    if(n.s)svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+15,'class':'dg-s'},'«'+n.s+'»'));
+    svg.appendChild(s('text',{x:n.x+n.w/2,y:n.y+(n.k==='state'?22:(n.s?31:19)),'class':'dg-t'},n.t));
+    if(n.m&&n.m.length){
+      svg.appendChild(s('line',{x1:n.x,y1:n.y+n.hdr,x2:n.x+n.w,y2:n.y+n.hdr,'class':'dg-sep'}));
+      n.m.forEach(function(l,i){svg.appendChild(s('text',{x:n.x+8,y:n.y+n.hdr+6+(i+1)*14-3,'class':'dg-m'},l))});
+    }
+  });
+  var wrap=el('div','diagram');
+  wrap.appendChild(svg);
+  if(b.cap)wrap.appendChild(el('p','dcap',b.cap));
+  return wrap;
+}
+
+function buildQbank(items){
+  var wrap=el('div');
+  items.forEach(function(q){
+    var d=document.createElement('details');d.className='q';
+    var s=document.createElement('summary');
+    s.innerHTML='<span class="qleft"><span>'+q.n+'</span><span class="pill">'+q.tag+'</span></span>';
+    d.appendChild(s);
+    var b=el('div','qbody');
+    b.appendChild(el('p','where','<b>Seen in:</b> '+q.where));
+    b.appendChild(el('div','qsec','<div class="label">The question</div><p>'+q.ask+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">What matters most</div><p>'+q.quality+'</p>'));
+    var st=el('div','qsec','<div class="label">Walk through it</div>');
+    var ol=el('ol','steps');
+    q.steps.forEach(function(x){ol.appendChild(el('li',null,'<div><b>'+x[0]+'</b>'+x[1]+'</div>'))});
+    st.appendChild(ol);b.appendChild(st);
+    if(q.code){
+      var c=el('div','qsec');
+      c.appendChild(el('div','cap',q.code.cap));
+      var pre=document.createElement('pre');pre.textContent=q.code.code;c.appendChild(pre);
+      if(q.code.use){
+        c.appendChild(el('div','cap use','How it is used'));
+        var p2=document.createElement('pre');p2.className='use';p2.textContent=q.code.use;c.appendChild(p2);
+      }
+      b.appendChild(c);
+    }
+    b.appendChild(el('div','qsec','<div class="label">Trade-offs to say out loud</div><p>'+q.trade+'</p>'));
+    b.appendChild(el('div','qsec','<div class="label">Follow-ups to expect</div><p>'+q.follow+'</p>'));
+    d.appendChild(b);wrap.appendChild(d);
+  });
+  return wrap;
+}
+
+var P={lld:['Design a parking lot','Design an elevator system','Design Splitwise (shared expenses)','Design a library system','Design a vending machine','Design an LRU cache','Design a chess game','Design an ATM','Design a movie ticket booking system','Design a logging framework'],
+ hld:['Design a URL shortener','Design a news feed','Design a chat application','Design a video streaming service','Design a ride-hailing app','Design a notification system','Design a web crawler','Design search autocomplete','Design a payment system','Design a ticket booking system']};
+var timerState={remaining:1200,running:false,endAt:0,id:null};
+function buildDrill(){
+  var box=el('div','check'),kind='lld',cur='';
+  box.appendChild(el('div','label','Today\'s drill'));
+  var pill=el('span','pill','LLD');var pw=el('div');pw.appendChild(pill);box.appendChild(pw);
+  var prompt=el('p',null,'');prompt.style.cssText='font:600 1.2rem/1.4 var(--font-display)';box.appendChild(prompt);
+  var r1=el('div','row');
+  var bl=el('button','reveal','New LLD prompt'),bh=el('button','reveal','New HLD prompt');bl.type=bh.type='button';
+  r1.appendChild(bl);r1.appendChild(bh);box.appendChild(r1);
+  var time=el('div','timer','20:00');box.appendChild(time);
+  var phase=el('p',null,'Ready when you are.');box.appendChild(phase);
+  var r2=el('div','row');
+  var st=el('button','btn','Start'),rs=el('button','btn ghost','Reset');st.type=rs.type='button';
+  r2.appendChild(st);r2.appendChild(rs);box.appendChild(r2);
+  function pick(k){kind=k;var l=P[k],p=cur;while(p===cur)p=l[Math.floor(Math.random()*l.length)];cur=p;prompt.textContent=p;pill.textContent=k.toUpperCase()}
+  function render(){
+    var rem=timerState.remaining,m=Math.floor(rem/60),s=rem%60;
+    time.textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+    var el_=1200-rem,txt;
+    if(rem<=0)txt='Time. Now write one line: what did I skip or hand-wave?';
+    else if(!timerState.running&&el_===0)txt='Ready when you are. Talk out loud.';
+    else if(el_<300)txt='Clarify: ask questions, pick three must-haves and one key quality.';
+    else if(el_<900)txt=kind==='lld'?'Model: nouns, verbs, who owns what, what will change.':'Model: numbers, the two actions, smallest design, what breaks first.';
+    else txt='Stress and trade: two users at once, a new requirement, then the template sentence.';
+    phase.textContent=txt;
+    st.textContent=timerState.running?'Pause':(rem<=0||rem===1200?'Start':'Resume');
+  }
+  function tick(){
+    timerState.remaining=Math.max(0,Math.ceil((timerState.endAt-Date.now())/1000));
+    if(timerState.remaining<=0){timerState.running=false;clearInterval(timerState.id);timerState.id=null}
+    render();
+  }
+  st.addEventListener('click',function(){
+    if(timerState.running){timerState.running=false;clearInterval(timerState.id);timerState.id=null;render();return}
+    if(timerState.remaining<=0)timerState.remaining=1200;
+    timerState.running=true;timerState.endAt=Date.now()+timerState.remaining*1000;
+    timerState.id=setInterval(tick,500);render();
+  });
+  rs.addEventListener('click',function(){timerState.running=false;clearInterval(timerState.id);timerState.id=null;timerState.remaining=1200;render()});
+  bl.addEventListener('click',function(){pick('lld');render()});
+  bh.addEventListener('click',function(){pick('hld');render()});
+  pick('lld');render();
+  return box;
+}
+
+/* ================= PAGE ================= */
+var cur=0;
+function idx(){
+  var h=(location.hash||'').replace('#','');
+  for(var i=0;i<L.length;i++)if(L[i].id===h)return i;
+  return 0;
+}
+function drawList(){
+  var host=$('#list');host.innerHTML='';
+  var last='';
+  L.forEach(function(l,i){
+    if(l.trackName!==last){last=l.trackName;host.appendChild(el('h3',null,l.trackName))}
+    var a=document.createElement('a');a.href='#'+l.id;
+    if(i===cur)a.setAttribute('aria-current','page');
+    a.innerHTML='<span class="n">'+(i+1)+'</span><span>'+l.title+'</span><span class="'+(done[l.id]?'tick':'min')+'">'+(done[l.id]?'&#10003; done':l.min+' min')+'</span>';
+    a.addEventListener('click',function(){closeList()});
+    host.appendChild(a);
+  });
+}
+function closeList(){$('#list').classList.remove('open');$('#menu-btn').setAttribute('aria-expanded','false')}
+$('#menu-btn').addEventListener('click',function(){
+  var o=$('#list').classList.toggle('open');this.setAttribute('aria-expanded',o?'true':'false');
+});
+function meter(){
+  var n=0;L.forEach(function(l){if(done[l.id])n++});
+  $('#meter').style.width=Math.round(n/L.length*100)+'%';
+}
+function draw(){
+  cur=idx();
+  var l=L[cur];
+  document.body.setAttribute('data-track',l.track);
+  $('#where').textContent='Lesson '+(cur+1)+' of '+L.length+' · '+l.trackName;
+  var host=$('#lesson');host.innerHTML='';
+  var head=el('div');
+  head.appendChild(el('div','kicker',l.trackName+' · about '+l.min+' minutes'));
+  head.appendChild(el('h1',null,l.title));
+  head.appendChild(el('p','promise',l.promise));
+  host.appendChild(head);
+  l.blocks.forEach(function(b){renderBlock(b,host)});
+  var dr=el('label','done-row');
+  var cb=document.createElement('input');cb.type='checkbox';cb.checked=!!done[l.id];
+  cb.addEventListener('change',function(){if(cb.checked)done[l.id]=1;else delete done[l.id];save();meter();drawList()});
+  dr.appendChild(cb);dr.appendChild(el('span',null,'I finished this lesson'));
+  host.appendChild(dr);
+  var nav=el('div','nav');
+  var pv=el('button','btn ghost','Previous');pv.type='button';pv.disabled=cur===0;
+  var nx=el('button','btn',cur===L.length-1?'Back to lesson 1':'Next lesson');nx.type='button';
+  pv.addEventListener('click',function(){if(cur>0)location.hash=L[cur-1].id});
+  nx.addEventListener('click',function(){location.hash=L[cur===L.length-1?0:cur+1].id});
+  nav.appendChild(pv);nav.appendChild(nx);host.appendChild(nav);
+  meter();drawList();
+}
+window.addEventListener('hashchange',function(){draw();window.scrollTo(0,0)});
+draw();
+})();
+</script>
