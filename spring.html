@@ -278,6 +278,14 @@ class OrderService {
    {id:`f`,t:`6 In use`,x:244,y:104,w:70,k:`state`},
    {id:`g`,t:`7 Destroy`,s:`@PreDestroy`,x:326,y:96,w:90}],
   edges:[{a:`a`,b:`b`},{a:`b`,b:`c`},{a:`c`,b:`d`},{a:`d`,b:`e`},{a:`e`,b:`f`},{a:`f`,b:`g`}]}},
+ {t:`steps`,items:[
+   [`1 Create.`,` Spring calls your constructor. The object exists, but its dependencies are not set yet (with constructor injection they arrive as arguments).`],
+   [`2 Inject.`,` Spring fills in the rest: setter and field injections, <code>@Value</code> values.`],
+   [`3 Aware and pre-init.`,` If the bean asks to know about the container (<code>BeanNameAware</code>, <code>ApplicationContextAware</code>), Spring tells it. Then every <code>BeanPostProcessor</code> gets a look before init.`],
+   [`4 Init.`,` Your setup code runs: <code>@PostConstruct</code>, then <code>afterPropertiesSet()</code>, then a custom init method. Dependencies are ready, so this is the safe place to load a cache or open a connection.`],
+   [`5 Post-init.`,` The post-processors run again. This is where Spring swaps your bean for a <b>proxy</b> if it needs one, for example for <code>@Transactional</code>. What other beans receive is that proxy.`],
+   [`6 In use.`,` The bean serves requests for as long as the application runs. A singleton lives until shutdown.`],
+   [`7 Destroy.`,` On shutdown Spring calls <code>@PreDestroy</code> and <code>destroy()</code> so you can close resources. Prototype beans are not destroyed by Spring.`]]},
  {t:`code`,use:true,cap:`How it is used: warm a cache at start and close a client at shutdown`,code:`@Component
 class PriceCache {
     private final PriceClient client;

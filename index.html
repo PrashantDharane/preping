@@ -73,7 +73,7 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
   <header>
     <p class="kicker">Mid-level interview prep</p>
     <h1>Interview Prep Hub</h1>
-    <p class="lede">Design, Java, Spring, databases, messaging, security and DevOps, taught in plain words with diagrams, usage code and worked answers. Pick one lesson a day. Small and regular beats long and rare.</p>
+    <p class="lede">Coding rounds (DSA), design, Java, Spring, databases, messaging, security and DevOps, taught in plain words with diagrams, usage code and worked answers. Pick one lesson a day. Small and regular beats long and rare.</p>
   </header>
 
   <section class="today" aria-label="Where to continue">
@@ -102,6 +102,21 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
       <div class="bar"><i id="bar-pat"></i></div>
       <span class="prog" id="prog-pat">0 of 13 done</span>
       <span class="open">Open the patterns course</span>
+    </a>
+    </div>
+  </section>
+
+  <section aria-label="Coding rounds">
+    <div class="sec-h"><h2>Coding rounds</h2><p>The programming round: patterns first, then problems, then a plan you can keep.</p></div>
+    <div class="cards">
+    <a class="card" id="card-dsa" style="--c:var(--practice)" href="dsa.html">
+      <span class="meta">14 lessons</span>
+      <h2>DSA and coding rounds</h2>
+      <p>Patterns, not random problems: 42 worked problems in Java, matched to what Swiggy, Zomato, CRED, Flipkart and Razorpay candidates report.</p>
+      <ul><li>Hashing, windows, binary search, heaps, trees, graphs, DP</li><li>Every solution compiled, run and traced by hand</li><li>Company-wise list and a 6-week confidence plan</li></ul>
+      <div class="bar"><i id="bar-dsa"></i></div>
+      <span class="prog" id="prog-dsa">0 of 14 done</span>
+      <span class="open">Open the DSA course</span>
     </a>
     </div>
   </section>
@@ -197,6 +212,9 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
       <a class="chip" style="--c:var(--bank)" href="auth.html#lesson-3">JWT</a>
       <a class="chip" style="--c:var(--bank)" href="auth.html#lesson-4">OAuth2</a>
       <a class="chip" style="--c:var(--bank)" href="auth.html#lesson-7">Auth questions</a>
+      <a class="chip" style="--c:var(--practice)" href="dsa.html#lesson-1">DSA: how rounds run</a>
+      <a class="chip" style="--c:var(--practice)" href="dsa.html#lesson-13">DSA by company</a>
+      <a class="chip" style="--c:var(--practice)" href="dsa.html#lesson-14">DSA confidence plan</a>
       <a class="chip" style="--c:var(--start)" href="devops.html#lesson-3">Kubernetes objects</a>
       <a class="chip" style="--c:var(--start)" href="devops.html#lesson-7">DevOps questions</a>
     </div>
@@ -205,6 +223,7 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
   <section class="quick" aria-label="Short on time">
     <span class="label">Short on time? Do these first</span>
     <ol>
+      <li><a href="dsa.html#lesson-3">DSA: arrays and hashing</a>, then <a href="dsa.html#lesson-13">DSA by company</a></li>
       <li><a href="java-core.html#lesson-7">Java questions</a> and <a href="java-deep.html#lesson-7">concurrency questions</a></li>
       <li><a href="spring.html#lesson-6">Spring Boot questions</a></li>
       <li><a href="data.html#lesson-8">SQL and JPA questions</a></li>
@@ -223,7 +242,7 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
       <div class="row"><span class="d">Week 4</span><span>Spring Boot internals, then SQL, JPA and Kafka.</span></div>
       <div class="row"><span class="d">Week 5</span><span>Auth and security, then Docker, Kubernetes and CI/CD.</span></div>
       <div class="row"><span class="d">Weeks 6 to 8</span><span>Question banks only. Pick five questions a day across topics and answer them out loud.</span></div>
-      <div class="row"><span class="d">Every day</span><span>The 20-minute drill in lesson 13 of the full course. Do the smallest version on bad days.</span></div>
+      <div class="row"><span class="d">Every day</span><span>One DSA block (about 75 minutes, see the DSA confidence plan), plus the 20-minute design drill in lesson 13 of the full course. Do the smallest version on bad days.</span></div>
     </div>
   </section>
 
@@ -233,7 +252,7 @@ h1{font-size:clamp(2rem,6vw,3rem);font-weight:700;letter-spacing:-.02em;margin-t
 <script>
 (function(){
 'use strict';
-var COURSES=[{"k": "course", "key": "design-course-v1", "n": 30, "file": "course.html", "name": "Full course"}, {"k": "pat", "key": "design-patterns-v1", "n": 13, "file": "design-patterns.html", "name": "Design patterns"}, {"k": "jcore", "key": "java-core-v1", "n": 7, "file": "java-core.html", "name": "Java core and versions 8 to 21"}, {"k": "deep", "key": "java-deep-v1", "n": 7, "file": "java-deep.html", "name": "Concurrency and JVM"}, {"k": "spring", "key": "spring-course-v1", "n": 6, "file": "spring.html", "name": "Spring Boot internals"}, {"k": "data", "key": "data-course-v1", "n": 9, "file": "data.html", "name": "SQL, JPA and Kafka"}, {"k": "auth", "key": "auth-course-v1", "n": 7, "file": "auth.html", "name": "Auth and security"}, {"k": "devops", "key": "devops-course-v1", "n": 7, "file": "devops.html", "name": "Docker, Kubernetes, CI/CD"}];
+var COURSES=[{"k": "course", "key": "design-course-v1", "n": 30, "file": "course.html", "name": "Full course"}, {"k": "pat", "key": "design-patterns-v1", "n": 13, "file": "design-patterns.html", "name": "Design patterns"}, {"k": "jcore", "key": "java-core-v1", "n": 7, "file": "java-core.html", "name": "Java core and versions 8 to 21"}, {"k": "deep", "key": "java-deep-v1", "n": 7, "file": "java-deep.html", "name": "Concurrency and JVM"}, {"k": "spring", "key": "spring-course-v1", "n": 6, "file": "spring.html", "name": "Spring Boot internals"}, {"k": "data", "key": "data-course-v1", "n": 9, "file": "data.html", "name": "SQL, JPA and Kafka"}, {"k": "auth", "key": "auth-course-v1", "n": 7, "file": "auth.html", "name": "Auth and security"}, {"k": "devops", "key": "devops-course-v1", "n": 7, "file": "devops.html", "name": "Docker, Kubernetes, CI/CD"}, {"k": "dsa", "key": "dsa-v1", "n": 14, "file": "dsa.html", "name": "DSA and coding rounds"}];
 function load(key){try{return JSON.parse(localStorage.getItem(key)||'{}')||{}}catch(e){return {}}}
 function count(o){var n=0;for(var k in o)if(o[k])n++;return n}
 function set(id,txt){var e=document.getElementById(id);if(e)e.textContent=txt}
