@@ -226,6 +226,62 @@ public class ShopApp {
 // 3. Apply auto-configuration (DataSource, Jackson, embedded Tomcat... if on the classpath)
 // 4. Build and wire all beans, apply proxies
 // 5. Start the embedded web server and publish "ready"`},
+ {t:`p`,h:`<h2>Why Spring exists, in a pocket-sized version</h2>`},
+ {t:`analogy`,h:`Think of a society with a caretaker. You do not hire the plumber, find the electrician and chase the watchman yourself. You tell the caretaker what is wrong, and he sends the right person. Spring is the caretaker for your objects. A class says "I need a Notifier", and Spring finds one and hands it over. The class never says <code>new SmsNotifier()</code> itself.`},
+ {t:`plain`,h:`Without Spring, every class builds its own helpers with <code>new</code>. Then swapping the SMS sender for an email sender means editing every class that built one, and testing a class means dragging in the real SMS sender too. The code below is a tiny hand-made "Spring" in plain Java. It does the same two jobs the real one does: remember how to build each object, and build each one only once.`},
+ {t:`code`,cap:`Java (plain Java, no Spring needed, compiled and run)`,code:`// Two ordinary classes. Neither one creates the other.
+interface Notifier { void send(String to, String msg); }
+static class SmsNotifier implements Notifier {
+    public void send(String to, String msg) { System.out.println("SMS to " + to + ": " + msg); }
+}
+static class OrderService {
+    private final Notifier notifier;                       // asks for what it needs
+    OrderService(Notifier notifier) { this.notifier = notifier; }
+    void place(String user) { notifier.send(user, "Order placed"); }
+}
+
+// A pocket-sized "Spring": it remembers recipes and builds each object once.
+static class MiniContainer {
+    private final Map<Class<?>, Supplier<?>> recipes = new HashMap<>();
+    private final Map<Class<?>, Object> singletons = new HashMap<>();
+    <T> void register(Class<T> type, Supplier<? extends T> recipe) { recipes.put(type, recipe); }
+    @SuppressWarnings("unchecked")
+    <T> T get(Class<T> type) {
+        Object existing = singletons.get(type);
+        if (existing == null) {                          // not built yet: follow the recipe, then remember it
+            existing = recipes.get(type).get();
+            singletons.put(type, existing);
+        }
+        return (T) existing;                             // built once, reused after that
+    }
+}
+
+static void s_ioc() {
+    MiniContainer spring = new MiniContainer();
+    spring.register(Notifier.class, SmsNotifier::new);
+    spring.register(OrderService.class, () -> new OrderService(spring.get(Notifier.class)));  // wiring
+
+    OrderService service = spring.get(OrderService.class);
+    service.place("asha@example.com");
+    System.out.println("same object every time: " + (service == spring.get(OrderService.class)));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`SMS to asha@example.com: Order placed
+same object every time: true`},
+ {t:`steps`,items:[[`Read the first block.`,` <code>OrderService</code> only knows the word <code>Notifier</code>. It does not know SMS exists.`],[`Read the container.`,` <code>register</code> stores a recipe. <code>get</code> follows the recipe once and keeps the result.`],[`Read the wiring.`,` The recipe for <code>OrderService</code> asks the container for a <code>Notifier</code>. That one line is what <code>@Autowired</code> or constructor injection does for you.`],[`Read the last line.`,` The same object comes back every time. That is a <b>singleton</b>, Spring's default scope.`]]},
+ {t:`plain`,h:`<b>Why this helps testing.</b> Because the helper is passed in, a test can pass in a fake one. No Spring, no database, no SMS gateway. This is the main reason experienced people prefer constructor injection.`},
+ {t:`code`,cap:`Java: a test with a fake helper (plain Java)`,code:`static class FakeNotifier implements Notifier {          // a stand-in that just remembers what it was told
+    final List<String> sent = new ArrayList<>();
+    public void send(String to, String msg) { sent.add(to + ": " + msg); }
+}
+static void s_test() {
+    FakeNotifier fake = new FakeNotifier();
+    OrderService service = new OrderService(fake);       // no Spring needed: just pass the helper in
+    service.place("ravi@example.com");
+    System.out.println("messages sent: " + fake.sent);
+    System.out.println("test passed? " + fake.sent.equals(List.of("ravi@example.com: Order placed")));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`messages sent: [ravi@example.com: Order placed]
+test passed? true`},
  {t:`check`,q:`In one sentence each: what is dependency injection, and what is the difference between <code>BeanFactory</code> and <code>ApplicationContext</code>?`,a:`Dependency injection means a class receives the objects it needs from outside instead of creating them. BeanFactory is the basic container that creates beans on demand. ApplicationContext builds on it and adds events, internationalisation, resource loading, annotation-driven config and eager singleton creation. In practice you always use ApplicationContext.`}
 ]},
 
@@ -268,6 +324,21 @@ class OrderService {
    {h:`prototype`,b:`A new instance every time it is requested.`},
    {h:`request, session`,b:`One per HTTP request or session (web apps).`}]},
  {t:`mistake`,h:`The scope trap: a <b>singleton</b> that has a <b>prototype</b> injected. The prototype is created <b>once</b>, when the singleton is built, and never again. Fix with <code>ObjectProvider&lt;T&gt;</code> and <code>provider.getObject()</code> at each use, or a scoped proxy. Also: keeping per-user data in a singleton field is a race condition.`},
+ {t:`analogy`,h:`Singleton and prototype are like a society's water tank and a paper cup. One tank serves the whole building and everyone shares it, so you must never keep your personal belongings in it. A paper cup is fresh for every person, and thrown away after use. The mistake people make is putting one person's data (a user name, a running total) inside a singleton, which is the shared tank.`},
+ {t:`code`,cap:`Java: the difference in two lines (plain Java)`,code:`static class Counter { }
+static void s_scope() {
+    // singleton: the container builds it once and hands out the same one
+    Counter single = new Counter();
+    Supplier<Counter> singleton = () -> single;
+    // prototype: the container builds a fresh one every time you ask
+    Supplier<Counter> prototype = Counter::new;
+
+    System.out.println("singleton, asked twice, same object? " + (singleton.get() == singleton.get()));
+    System.out.println("prototype, asked twice, same object? " + (prototype.get() == prototype.get()));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`singleton, asked twice, same object? true
+prototype, asked twice, same object? false`},
+ {t:`mistake`,h:`Keeping per-request data in a field of a singleton bean. Two users hit the same bean at the same time and see each other's data. Keep state in method variables, or use a request-scoped bean.`},
  {t:`p`,h:`<h2>The bean lifecycle, in order</h2>`},
  {t:`diagram`,cap:`The order interviewers want. Setup hooks run after injection and before the bean is used.`,d:{w:420,alt:`Bean lifecycle steps from instantiation to destruction`,nodes:[
    {id:`a`,t:`1 Create`,s:`constructor`,x:6,y:8,w:92},
@@ -298,12 +369,34 @@ class PriceCache {
     @PreDestroy                       // runs on graceful shutdown
     void close() { client.close(); }
 }`},
+ {t:`analogy`,h:`The bean lifecycle is like hiring an employee. The offer letter (creation), the laptop and ID card handed over (injection), the induction day (init method), the actual work (in use), and the exit formality where the laptop is returned (destroy). Spring runs your methods at the induction day and the exit day, so you can open and close things properly.`},
+ {t:`code`,cap:`Java: the five moments, written out by hand (plain Java)`,code:`static class Connection {
+    Connection()                 { System.out.println("1. constructor: object is created"); }
+    void setUrl(String url)      { System.out.println("2. dependencies set: url = " + url); }
+    void init()                  { System.out.println("3. @PostConstruct: open the connection"); }
+    void use()                   { System.out.println("4. in use: serving requests"); }
+    void destroy()               { System.out.println("5. @PreDestroy: close the connection"); }
+}
+static void s_lifecycle() {
+    Connection c = new Connection();     // Spring creates
+    c.setUrl("db://orders");             // Spring injects
+    c.init();                            // Spring calls your init method
+    c.use();                             // your app runs
+    c.destroy();                         // on shutdown Spring calls your cleanup
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`1. constructor: object is created
+2. dependencies set: url = db://orders
+3. @PostConstruct: open the connection
+4. in use: serving requests
+5. @PreDestroy: close the connection`},
+ {t:`plain`,h:`In real Spring the middle three calls are done for you. You only add <code>@PostConstruct</code> on the method that should run at induction, and <code>@PreDestroy</code> on the one that should run at exit. The order never changes.`},
  {t:`p`,h:`<h2>Circular dependencies</h2>`},
  {t:`plain`,h:`A needs B, and B needs A. With constructor injection Spring cannot build either first, so it fails at startup with <code>BeanCurrentlyInCreationException</code>. Since Spring Boot 2.6 circular references are <b>blocked by default</b>.`},
  {t:`steps`,items:[
    [`Best fix: redesign.`,` A cycle usually means two classes share a responsibility. Pull the shared part into a third class, or use an event so one side no longer calls the other.`],
    [`Quick fix: @Lazy.`,` Put <code>@Lazy</code> on one constructor parameter. Spring injects a proxy and resolves it on first use.`],
    [`Do not: turn the check off.`,` <code>spring.main.allow-circular-references=true</code> hides a design problem.`]]},
+ {t:`analogy`,h:`A circular dependency is two people at a doorway, each saying "after you". Neither can enter first. With constructor injection, A cannot be built until B exists, and B cannot be built until A exists, so Spring stops at start-up with a clear error. That is actually helpful: it shows a design problem early. The fix is to move the shared piece into a third class that both can use.`},
  {t:`check`,q:`A singleton service keeps a <code>private User currentUser</code> field set on each request. What goes wrong?`,a:`Spring creates one instance shared by all request threads, so one request overwrites another's user. This is a race that leaks data between users. Keep request data in method parameters or local variables. If you truly need request-scoped state, use a request-scoped bean or <code>ThreadLocal</code> managed carefully.`}
 ]},
 
@@ -350,6 +443,21 @@ ObjectMapper objectMapper() {
         .registerModule(new JavaTimeModule())
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 }`},
+ {t:`analogy`,h:`Auto-configuration is like a new phone. It comes with a default browser, a default clock and a default keyboard. The moment you install your own keyboard app and choose it, the phone stops using its default. Spring Boot works the same way: it adds a default only when you have not supplied your own.`},
+ {t:`code`,cap:`Java: the "add the default only if missing" idea (plain Java)`,code:`static void s_autoconf() {
+    Map<String, String> beans = new LinkedHashMap<>();
+    beans.put("dataSource", "MyOwnDataSource");          // you defined one yourself
+
+    // Auto-configuration: "add the default only if there is none"
+    beans.putIfAbsent("dataSource", "DefaultH2DataSource");   // skipped, yours wins
+    beans.putIfAbsent("objectMapper", "DefaultJsonMapper");   // nobody defined one, default added
+
+    beans.forEach((name, impl) -> System.out.println(name + " -> " + impl));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`dataSource -> MyOwnDataSource
+objectMapper -> DefaultJsonMapper`},
+ {t:`plain`,h:`Real Spring Boot does exactly this with the annotation <code>@ConditionalOnMissingBean</code>. "Add this default only if there is no bean of this type yet." That one rule explains why defining your own <code>DataSource</code> or <code>ObjectMapper</code> quietly replaces Boot's.`},
+ {t:`steps`,items:[[`Something behaves differently than you expected.`,` Do not guess. Ask Boot what it decided.`],[`Run with the debug flag.`,` <code>--debug</code> or <code>debug=true</code> prints a "conditions evaluation report".`],[`Read two lists.`,` "Positive matches" are defaults that were applied. "Negative matches" are defaults that were skipped, with the reason.`],[`Override on purpose.`,` Define your own bean, or set a property, or exclude the auto-configuration class.`]]},
  {t:`p`,h:`<h2>Configuration: properties, profiles, precedence</h2>`},
  {t:`code`,cap:`Typed properties beat scattered @Value strings`,code:`@ConfigurationProperties(prefix = "payments")
 public record PaymentProperties(String baseUrl, Duration timeout, int retries) {}
@@ -424,12 +532,56 @@ class OrderService {
     @Transactional
     public void place(Order o) { save(o); audit.audit(o); }
 }`},
+ {t:`analogy`,h:`Why does @Transactional sometimes do nothing? Imagine a doctor with a receptionist. Every patient who comes through the front door is handled by the receptionist: she opens the file first and closes it after. But if the doctor turns to his own assistant and says "also check this", that request never goes past the receptionist, so no file is opened. In Spring, the proxy is the receptionist. A call from outside goes through her. A call from one method to another <b>inside the same class</b> does not.`},
+ {t:`code`,cap:`Java: a hand-made proxy showing the trap (plain Java, using java.lang.reflect.Proxy)`,code:`interface Transfers { void transfer(); void audit(); }
+
+static class RealTransfers implements Transfers {
+    public void transfer() {
+        System.out.println("  transfer: moving money");
+        this.audit();                                     // a call from inside the same object
+    }
+    public void audit() { System.out.println("  audit: writing the audit row"); }
+}
+
+static void s_proxy() {
+    Transfers real = new RealTransfers();
+    // The proxy is the receptionist. It does work before and after every call that goes THROUGH it.
+    Transfers proxy = (Transfers) Proxy.newProxyInstance(
+            Transfers.class.getClassLoader(), new Class<?>[]{Transfers.class},
+            (p, method, args) -> {
+                System.out.println("BEGIN transaction for " + method.getName());
+                try {
+                    Object result = method.invoke(real, args);
+                    System.out.println("COMMIT for " + method.getName());
+                    return result;
+                } catch (Exception e) {
+                    System.out.println("ROLLBACK for " + method.getName());
+                    throw e;
+                }
+            });
+
+    System.out.println("Calling transfer() through the proxy:");
+    proxy.transfer();
+    System.out.println();
+    System.out.println("Notice: audit() ran, but only transfer() got a BEGIN and COMMIT.");
+    System.out.println("The inner this.audit() call never went through the proxy.");
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`Calling transfer() through the proxy:
+BEGIN transaction for transfer
+  transfer: moving money
+  audit: writing the audit row
+COMMIT for transfer
+
+Notice: audit() ran, but only transfer() got a BEGIN and COMMIT.
+The inner this.audit() call never went through the proxy.`},
+ {t:`steps`,items:[[`See who calls whom.`,` The test calls <code>proxy.transfer()</code>. It goes through the proxy, so a transaction starts and commits.`],[`Inside, transfer calls audit.`,` It uses <code>this.audit()</code>. <code>this</code> is the real object, not the proxy.`],[`So audit gets no transaction of its own.`,` If audit had <code>REQUIRES_NEW</code> or any other setting, it would be ignored here.`],[`The fix.`,` Put audit in a different bean and inject it. Then the call goes through that bean's proxy.`]]},
  {t:`p`,h:`<h2>Propagation: what if a transaction already exists?</h2>`},
  {t:`cards`,items:[
    {h:`REQUIRED (default)`,b:`Join the current one, or start one if none exists.`},
    {h:`REQUIRES_NEW`,b:`Pause the current one and start a fresh independent one. Good for audit logs.`},
    {h:`NESTED`,b:`A savepoint inside the current one. Partial rollback is possible.`},
    {h:`SUPPORTS, NOT_SUPPORTED, MANDATORY, NEVER`,b:`Run with it if it exists, always without one, require one, or forbid one.`}]},
+ {t:`analogy`,h:`Propagation answers one question: "a transaction is already running, what should I do?". <b>REQUIRED</b> is joining a meeting that has already started: you sit in the same room and share the minutes. If the meeting is cancelled, your part is cancelled too. <b>REQUIRES_NEW</b> is stepping out to a separate room with its own minutes. What you decide there is saved even if the main meeting is later cancelled. That is why it suits things like audit logs, which must survive a rollback.`},
  {t:`p`,h:`<h2>Two kinds of proxy</h2>`},
  {t:`two`,a:{h:`JDK dynamic proxy`,b:`Used when the bean implements an interface. The proxy implements the same interface.`},b:{h:`CGLIB proxy`,b:`A generated subclass of your class. Spring Boot uses this by default. That is why a class or method marked <code>final</code> cannot be proxied.`}},
  {t:`remember`,h:`The same proxy idea powers <code>@Async</code>, <code>@Cacheable</code>, <code>@Retryable</code> and Spring Security's <code>@PreAuthorize</code>. All share the same self-invocation limit. One explanation covers all of them.`},
@@ -477,6 +629,39 @@ class Errors {
         return ResponseEntity.badRequest().body(fields);      // {"qty":"must be greater than or equal to 1"}
     }
 }`},
+ {t:`analogy`,h:`Spring MVC is a hotel front desk. A guest (HTTP request) arrives. The desk looks at the room number (URL and method) and sends the guest to the right department (your controller method). The department does the work and returns something. The desk then wraps it in a proper response. If something goes wrong, a manager (the exception handler) speaks to the guest politely, so the guest never sees the kitchen mess.`},
+ {t:`code`,cap:`Java: a front controller in 25 lines (plain Java, no Spring)`,code:`static class MiniDispatcher {
+    private final Map<String, java.util.function.Function<String, String>> routes = new HashMap<>();
+    void map(String method, String path, java.util.function.Function<String, String> handler) {
+        routes.put(method + " " + path, handler);          // like @GetMapping("/orders")
+    }
+    String handle(String method, String path, String body) {
+        var handler = routes.get(method + " " + path);     // 1. find the controller method
+        if (handler == null) return "404 Not Found";
+        try {
+            return "200 " + handler.apply(body);           // 2. run it, 3. turn the result into a response
+        } catch (IllegalArgumentException e) {
+            return "400 " + e.getMessage();                // like an @ExceptionHandler
+        }
+    }
+}
+static void s_mvc() {
+    MiniDispatcher dispatcher = new MiniDispatcher();
+    dispatcher.map("GET", "/orders", body -> "[order 1, order 2]");
+    dispatcher.map("POST", "/orders", body -> {
+        if (body.isBlank()) throw new IllegalArgumentException("sku must not be blank");
+        return "created " + body;
+    });
+    System.out.println(dispatcher.handle("GET", "/orders", ""));
+    System.out.println(dispatcher.handle("POST", "/orders", "sku-42"));
+    System.out.println(dispatcher.handle("POST", "/orders", ""));
+    System.out.println(dispatcher.handle("GET", "/nope", ""));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`200 [order 1, order 2]
+200 created sku-42
+400 sku must not be blank
+404 Not Found`},
+ {t:`plain`,h:`Real Spring MVC does these same steps. <code>@GetMapping</code> and <code>@PostMapping</code> fill in the map of routes. The <code>DispatcherServlet</code> is the front desk. <code>@ExceptionHandler</code> or <code>@RestControllerAdvice</code> is the manager who turns a thrown exception into a clean 400 message.`},
  {t:`p`,h:`<h2>Calling other services</h2>`},
  {t:`cards`,items:[
    {h:`RestTemplate`,b:`Older, blocking, in maintenance mode.`},
@@ -502,6 +687,7 @@ class OrderControllerTest {
     }
 }`},
  {t:`mistake`,h:`Using <code>@SpringBootTest</code> for everything. A suite of 300 such tests takes many minutes, and nobody runs it locally. Push logic into plain classes and test those without Spring.`},
+ {t:`analogy`,h:`Choosing a test type is choosing how much of the car to test. To check the engine, you do not need to drive on the highway. <b>A plain unit test</b> tests the engine on a bench: fast, no Spring. <b>@WebMvcTest</b> tests the steering and pedals: only the web layer. <b>@DataJpaTest</b> tests the fuel system: only the database layer. <b>@SpringBootTest</b> is the full road test: slow, so use it sparingly. Pick the smallest one that can catch the bug.`},
  {t:`check`,q:`You need to log the time every request takes, including requests rejected by security. Filter or interceptor?`,a:`A servlet <b>filter</b>, ordered before the security filter chain. An interceptor runs only for requests that reach Spring MVC, so requests rejected earlier by security would not be timed.`}
 ]},
 

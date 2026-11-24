@@ -260,6 +260,23 @@ void hit() { count.increment(); }`},
     public void stop() { running = false; }            // the loop sees this promptly
     public long polledSoFar() { return polled.sum(); } // exposed as a metric
 }`},
+ {t:`analogy`,h:`Two clerks update the same ledger. Both read "100", both add 1 in their heads, both write "101". One update is lost. That is a race condition: the three steps (read, add, write) are not one unbreakable step. <code>synchronized</code> is a rule that only one clerk may use the ledger at a time. An <code>AtomicInteger</code> is a ledger machine that adds 1 in a single unbreakable step.`},
+ {t:`code`,cap:`Java: two threads, 2 million increments each`,code:`static int plain = 0;
+static final AtomicInteger safe = new AtomicInteger();
+static void d_race() throws Exception {
+    Runnable job = () -> { for (int i = 0; i < 2_000_000; i++) { plain++; safe.incrementAndGet(); } };
+    Thread t1 = new Thread(job), t2 = new Thread(job);
+    t1.start(); t2.start(); t1.join(); t2.join();
+    System.out.println("expected       : 4000000");
+    System.out.println("plain int      : " + plain);
+    System.out.println("AtomicInteger  : " + safe.get());
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`expected       : 4000000
+plain int      : 3041722
+AtomicInteger  : 4000000
+(your plain int will be a different number every run)`},
+ {t:`plain`,h:`<code>plain++</code> looks like one step but it is read, add, write. Two threads interleave and some updates vanish. <code>AtomicInteger</code> never loses any.`},
+ {t:`analogy`,h:`<code>volatile</code> is a notice board in the office. If one person changes a notice, everyone sees the new one at once. Without <code>volatile</code>, each person may be reading a private notebook copy that is out of date. But a notice board does not stop two people from editing at once. For that you need <code>synchronized</code> or an atomic class.`},
  {t:`p`,h:`<h2>The Java Memory Model in one idea: happens-before</h2>`},
  {t:`plain`,h:`Each thread may keep its own cached copy of variables. The memory model defines when one thread's write is guaranteed to be seen by another. That guarantee is called <b>happens-before</b>. Unlocking a monitor happens-before the next lock of it. A volatile write happens-before every later read of it. Starting a thread happens-before its first action.`},
  {t:`mistake`,h:`Saying "volatile makes it thread-safe". It does not give atomicity. Also: double-checked locking for a singleton only works if the field is <code>volatile</code>. Without it, another thread can see a half-built object.`},
@@ -307,6 +324,33 @@ class DashboardService {
    {h:`Executors.newFixedThreadPool`,b:`Uses an <b>unbounded</b> queue. Under load the queue grows until memory runs out. The maximum size is never used.`},
    {h:`Executors.newCachedThreadPool`,b:`Unbounded <b>threads</b>. A burst can create thousands and exhaust the machine.`},
    {h:`Rejection policies`,b:`<code>AbortPolicy</code> (default, throws), <code>CallerRunsPolicy</code>, <code>DiscardPolicy</code>, <code>DiscardOldestPolicy</code>.`}]},
+ {t:`analogy`,h:`Look at the pool like a restaurant. There are 2 regular tables (core threads). When both are busy, new guests wait in a small waiting area (the queue, 2 seats). When the waiting area is also full, the manager opens 2 extra tables (up to the maximum of 4). When even those are busy and the waiting area is full, the next guest is turned away at the door (rejection). The output shows this happening step by step.`},
+ {t:`code`,cap:`Java: a pool with 2 core threads, max 4, and a queue of 2`,code:`static void d_pool() throws Exception {
+    CountDownLatch release = new CountDownLatch(1);
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(
+            2, 4, 30, TimeUnit.SECONDS,                  // 2 core counters, up to 4 in total
+            new ArrayBlockingQueue<>(2),                 // a waiting line of only 2
+            new ThreadPoolExecutor.AbortPolicy());       // when everything is full: say no
+    for (int task = 1; task <= 7; task++) {
+        try {
+            pool.execute(() -> { try { release.await(); } catch (InterruptedException ignored) { } });
+            System.out.println("task " + task + " accepted   workers=" + pool.getPoolSize() + " waiting=" + pool.getQueue().size());
+        } catch (RejectedExecutionException e) {
+            System.out.println("task " + task + " REJECTED  workers=" + pool.getPoolSize() + " waiting=" + pool.getQueue().size());
+        }
+    }
+    release.countDown();
+    pool.shutdown();
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`task 1 accepted   workers=1 waiting=0
+task 2 accepted   workers=2 waiting=0
+task 3 accepted   workers=2 waiting=1
+task 4 accepted   workers=2 waiting=2
+task 5 accepted   workers=3 waiting=2
+task 6 accepted   workers=4 waiting=2
+task 7 REJECTED  workers=4 waiting=2`},
+ {t:`steps`,items:[[`Tasks 1 and 2.`,` They get the two core workers.`],[`Tasks 3 and 4.`,` Both core workers are busy, so they wait in the queue.`],[`Tasks 5 and 6.`,` The queue is full, so the pool starts extra workers, up to the maximum of 4.`],[`Task 7.`,` Everything is full, so the rejection policy runs. Here it throws an error.`]]},
+ {t:`remember`,h:`<b>The surprise most people miss:</b> extra threads above the core size are created only after the <b>queue is full</b>. With an unbounded queue, the pool never grows past the core size at all.`},
  {t:`p`,h:`<h2>How big should the pool be?</h2>`},
  {t:`two`,a:{h:`CPU-bound work`,b:`Threads about equal to the number of cores, or cores plus one. More only adds switching cost.`},b:{h:`I/O-bound work`,b:`Threads = cores x (1 + wait time / compute time). If a task waits 90 ms and computes 10 ms, that is cores x 10. Then measure and adjust.`}},
  {t:`p`,h:`<h2>Locks beyond synchronized</h2>`},
@@ -338,6 +382,25 @@ boolean transfer(Account a, Account b, long amt) throws InterruptedException {
         from.debit(amt); to.credit(amt);
     }}
 }`},
+ {t:`analogy`,h:`A deadlock is two people on a narrow lane, each in a car facing the other, and neither will reverse. Or two diners each holding one chopstick and waiting for the other's. Thread A holds lock 1 and wants lock 2. Thread B holds lock 2 and wants lock 1. Nobody moves, ever. The program does not crash, it just hangs, which is why it is hard to notice.`},
+ {t:`code`,cap:`Java: create a deadlock, then detect it the way jstack does`,code:`static void d_deadlock() throws Exception {
+    Object lock1 = new Object(), lock2 = new Object();
+    Thread a = new Thread(() -> { synchronized (lock1) { pause(200); synchronized (lock2) { } } }, "thread-A");
+    Thread b = new Thread(() -> { synchronized (lock2) { pause(200); synchronized (lock1) { } } }, "thread-B");
+    a.setDaemon(true); b.setDaemon(true);                // so the JVM can still exit
+    a.start(); b.start();
+    Thread.sleep(800);
+
+    long[] ids = ManagementFactory.getThreadMXBean().findDeadlockedThreads();   // what jstack also reports
+    System.out.println("deadlocked threads found: " + (ids == null ? 0 : ids.length));
+    if (ids != null) for (ThreadInfo info : ManagementFactory.getThreadMXBean().getThreadInfo(ids))
+        System.out.println("  " + info.getThreadName() + " is " + info.getThreadState() + ", waiting for a lock held by " + info.getLockOwnerName());
+}
+static void pause(long ms) { try { Thread.sleep(ms); } catch (InterruptedException ignored) { } }`},
+ {t:`code`,use:true,cap:`What it prints`,code:`deadlocked threads found: 2
+  thread-A is BLOCKED, waiting for a lock held by thread-B
+  thread-B is BLOCKED, waiting for a lock held by thread-A`},
+ {t:`plain`,h:`The same detector is what <code>jstack</code> and thread-dump tools use. When a production service hangs with low CPU, take a thread dump and look for the line "Found one Java-level deadlock". The fix, as the lesson above shows, is to always take locks in the same order.`},
  {t:`p`,h:`<h2>Producer-consumer with a BlockingQueue</h2>`},
  {t:`code`,use:true,cap:`How it is used: orders in, workers out, no manual wait/notify`,code:`BlockingQueue<Order> queue = new ArrayBlockingQueue<>(100);   // bounded: producers slow down when full
 
@@ -369,6 +432,21 @@ while (true) {
    {h:`Stack`,b:`One per thread. Holds method frames, local variables and references. Freed automatically when a method returns. Deep recursion causes <code>StackOverflowError</code>.`},
    {h:`Metaspace`,b:`Class metadata. It replaced PermGen in Java 8 and lives in native memory, so it grows by default. Cap with <code>-XX:MaxMetaspaceSize</code>.`},
    {h:`References`,b:`The variable holds a reference on the stack. The object it points to is on the heap. Objects are collected when no live reference reaches them.`}]},
+ {t:`analogy`,h:`Think of a desk and a warehouse. The <b>stack</b> is your desk: small, tidy, and each task gets its own. You keep only what you are working on right now. The <b>heap</b> is the warehouse: large, shared by everyone, and it holds the actual goods (objects). On your desk you keep only a slip of paper with the shelf number. A <code>StackOverflowError</code> means your desk is full of slips because a method kept calling itself. An <code>OutOfMemoryError</code> usually means the warehouse is full.`},
+ {t:`code`,cap:`Java: a full desk versus a full warehouse`,code:`static int depth = 0;
+static void recurse() { depth++; recurse(); }
+static void d_stack() {
+    try { recurse(); }
+    catch (StackOverflowError e) {
+        System.out.println("the stack ran out after thousands of calls: " + (depth > 1000));
+    }
+    // The heap is a different area: a big list of objects fills the heap, not the stack.
+    List<byte[]> pile = new ArrayList<>();
+    pile.add(new byte[1024 * 1024]);
+    System.out.println("1 MB object lives on the heap, list holds only its address: " + pile.size());
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`the stack ran out after thousands of calls: true
+1 MB object lives on the heap, list holds only its address: 1`},
  {t:`p`,h:`<h2>The OutOfMemoryError family: what each message means</h2>`},
  {t:`cards`,items:[
    {h:`Java heap space`,b:`The heap is full of live objects. Either a leak, or the heap is simply too small for the data.`},
@@ -401,6 +479,18 @@ java -XX:MaxRAMPercentage=75 \\
  blocks:[
  {t:`plain`,h:`The garbage collector finds objects that nothing can reach any more and frees their memory. It starts from <b>GC roots</b> (live thread stacks, static fields) and follows references. Anything it cannot reach is garbage. This is called <b>reachability</b>, and it is why circular references are not a problem in Java.`},
  {t:`analogy`,h:`Imagine a big party hall. Guests who are still talking to someone connected to the host stay. Anyone standing alone with no connection to the main group gets politely shown out and their seat is cleared.`},
+ {t:`analogy`,h:`Garbage collection decides what to throw away by asking one question: "can anyone still reach this?". Imagine a contact list. Starting from yourself, you can reach friends, and friends of friends. A person nobody in the network can reach is not part of your world, and their memory can be freed. The starting points are called GC roots: running threads, static fields and local variables.`},
+ {t:`code`,cap:`Java: a strong link keeps an object alive, a weak link does not`,code:`static void d_ref() {
+    Object strong = new Object();
+    WeakReference<Object> weak = new WeakReference<>(new Object());   // only a weak link to it
+    WeakReference<Object> alsoWeak = new WeakReference<>(strong);     // this one is also held strongly
+    System.gc();                                                      // a request, not a command
+    System.out.println("object with only a weak link survived? " + (weak.get() != null));
+    System.out.println("object with a strong link survived?    " + (alsoWeak.get() != null));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`object with only a weak link survived? false
+object with a strong link survived?    true`},
+ {t:`plain`,h:`A normal variable is a <b>strong</b> link, which keeps the object alive. A <code>WeakReference</code> is like a sticky note with a name on it: it points at the object but does not stop the collector from removing it. Caches sometimes use weak links so they never hold memory the app would otherwise free. <code>System.gc()</code> is only a request, so never rely on it in real code. It is used here only to make the idea visible.`},
  {t:`p`,h:`<h2>Why the heap has generations</h2>`},
  {t:`plain`,h:`Studies of programs show that <b>most objects die young</b>: request objects, temporary strings. So the heap is split. A <b>minor GC</b> cleans only the young generation. It is quick, because most of it is dead. Objects that survive several rounds move to the old generation, which is cleaned rarely by a <b>major</b> or <b>mixed</b> collection.`},
  {t:`p`,h:`<h2>The collectors</h2>`},
@@ -452,6 +542,8 @@ java -XX:MaxRAMPercentage=75 \\
  promise:`Interviewers love "the service is slow, what do you do?". Here are three with a repeatable method. Each uses tools you can name.`,
  blocks:[
  {t:`remember`,h:`The method is always the same: <b>look before you change</b>. Check the symptom, take evidence (thread dump, heap dump, GC log, metrics), form a guess, test the guess, and only then change something. Interviewers are listening for this order.`},
+ {t:`analogy`,h:`Diagnosing a production problem is like a doctor's visit. First, the symptoms ("the service is slow"). Then the vital signs (CPU, memory, thread count, GC pauses). Then the tests (a thread dump, a heap dump). Only then a diagnosis, and only then treatment. Beginners jump to treatment (restart the pod) and lose the evidence. Take the dumps <b>before</b> you restart anything.`},
+ {t:`two`,a:{h:`Symptom`,b:`High CPU, low CPU but hanging, memory rising, slow after some hours.`},b:{h:`Test to run`,b:`A few thread dumps, a heap dump, the GC log, a look at the pool and connection metrics.`}},
  {t:`p`,h:`<h2>Incident 1: CPU stuck at 100 percent</h2>`},
  {t:`steps`,items:[
    [`Confirm.`,` Is it your Java process? <code>top -H -p &lt;pid&gt;</code> shows CPU per thread.`],

@@ -241,6 +241,31 @@ m.get(new Employee("E1"));   // null! different hash, so a different bucket`},
 // or simply make it a record: equals, hashCode and toString come free
 record Employee(String id) {}`},
  {t:`mistake`,h:`Using a <b>mutable</b> field in <code>hashCode</code> for a key. Change the field after inserting and the object sits in the wrong bucket forever. Keys should be immutable, which is why <code>String</code> and <code>Integer</code> are good keys.`},
+ {t:`analogy`,h:`Think of a post office. <code>hashCode()</code> is the pin code: it tells the sorter which box to look in. <code>equals()</code> is checking the name on the envelope. If your <code>hashCode</code> is missing, the sorter uses a random box each time, so a letter addressed to the same person is searched for in the wrong box and is never found, even though the name matches.`},
+ {t:`code`,cap:`Java: the bug, run and seen`,code:`static class BadEmployee {
+    final int id;
+    BadEmployee(int id) { this.id = id; }
+    @Override public boolean equals(Object o) { return o instanceof BadEmployee e && e.id == id; }
+    // no hashCode: the default one depends on the memory address
+}
+static class GoodEmployee {
+    final int id;
+    GoodEmployee(int id) { this.id = id; }
+    @Override public boolean equals(Object o) { return o instanceof GoodEmployee e && e.id == id; }
+    @Override public int hashCode() { return Integer.hashCode(id); }
+}
+static void j_equals() {
+    Set<BadEmployee> bad = new HashSet<>();
+    bad.add(new BadEmployee(7));
+    System.out.println("Bad : contains employee 7? " + bad.contains(new BadEmployee(7)));
+
+    Set<GoodEmployee> good = new HashSet<>();
+    good.add(new GoodEmployee(7));
+    System.out.println("Good: contains employee 7? " + good.contains(new GoodEmployee(7)));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`Bad : contains employee 7? false
+Good: contains employee 7? true`},
+ {t:`remember`,h:`<b>The rule in one line.</b> Equal objects must give the same hash code. Use the same fields in both methods. Records and IDE-generated methods get this right for you.`},
  {t:`p`,h:`<h2>2. Strings: immutable, pooled, and compared with equals</h2>`},
  {t:`code`,cap:`The classic puzzle`,code:`String a = "hello";
 String b = "hello";
@@ -253,6 +278,25 @@ System.out.println(a == c.intern()); // true - intern() returns the pooled copy`
    {h:`Why immutable?`,b:`Safe to share between threads, safe as a HashMap key (the hash is cached), safe for class loading and security checks, and it lets the pool exist.`},
    {h:`String vs StringBuilder`,b:`Concatenation in a loop makes a new String each time. Use <code>StringBuilder</code>. <code>StringBuffer</code> is the old synchronized version, rarely needed.`},
    {h:`Passwords`,b:`Prefer <code>char[]</code>, which you can overwrite. A String stays in memory until garbage collected.`}]},
+ {t:`analogy`,h:`Strings are like a printed wedding card. You cannot change the card once printed. If you want to change the name, you print a new card, and the old one stays as it was. Java also keeps a cupboard of ready-printed cards (the string pool) so that identical cards are shared instead of printed again.`},
+ {t:`code`,cap:`Java: the classic string puzzle`,code:`static void j_string() {
+    String a = "hello";
+    String b = "hello";
+    String c = new String("hello");
+    System.out.println("a == b       : " + (a == b));            // same pooled object
+    System.out.println("a == c       : " + (a == c));            // c is a separate object
+    System.out.println("a.equals(c)  : " + a.equals(c));         // same letters
+    System.out.println("a == c.intern(): " + (a == c.intern())); // intern gives the pooled one
+    String s = "Java";
+    s.concat(" 21");                                             // result thrown away
+    System.out.println("after concat, s is still: " + s);        // strings never change
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`a == b       : true
+a == c       : false
+a.equals(c)  : true
+a == c.intern(): true
+after concat, s is still: Java`},
+ {t:`steps`,items:[[`Line 1.`,` Both literals "hello" point to the same card in the cupboard, so <code>==</code> is true.`],[`Line 2.`,` <code>new String("hello")</code> forces a brand-new card, so <code>==</code> is false.`],[`Line 3.`,` <code>equals</code> compares the letters, so it is true. This is what you should always use.`],[`Line 5.`,` <code>concat</code> made a new card and the result was thrown away. The original is unchanged.`]]},
  {t:`p`,h:`<h2>3. Java is always pass-by-value</h2>`},
  {t:`code`,cap:`Passing an object passes a copy of the reference`,code:`void change(Employee e, int n) {
     e = new Employee("E9");   // only the local copy of the reference now points elsewhere
@@ -260,6 +304,23 @@ System.out.println(a == c.intern()); // true - intern() returns the pooled copy`
 }
 // The caller's variable still points to the old object, and the int is unchanged.
 // But e.setName("x") would change the shared object, because both references reach it.`},
+ {t:`analogy`,h:`Java is always pass-by-value, and here is a way to feel it. When you pass an object to a method, you do not hand over your house. You hand over a <b>photocopy of your house address</b>. The visitor can walk to your house and rearrange the furniture, and you will see the change. But if he tears up his photocopy and writes a different address, your house is still where it was.`},
+ {t:`code`,cap:`Java: change the object versus change the copy of the address`,code:`static class Employee { String name; Employee(String n) { name = n; } }
+static void change(Employee e, int n) {
+    e.name = "Changed";            // follows the copy of the address to the real object: visible outside
+    e = new Employee("New");       // moves only the local copy of the address: invisible outside
+    n = 99;                        // changes a local copy of the number
+}
+static void j_passvalue() {
+    Employee emp = new Employee("Original");
+    int number = 1;
+    change(emp, number);
+    System.out.println("name   = " + emp.name);
+    System.out.println("number = " + number);
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`name   = Changed
+number = 1`},
+ {t:`plain`,h:`Line by line: <code>e.name = ...</code> follows the address to the real object, so the change is visible. <code>e = new Employee(...)</code> only changes the local copy of the address, so the caller never notices. <code>n = 99</code> changes a local copy of the number.`},
  {t:`p`,h:`<h2>4. final, finally and finalize</h2>`},
  {t:`cards`,items:[
    {h:`final`,b:`Variable cannot be reassigned, method cannot be overridden, class cannot be extended. A final reference can still point to a changing object.`},
@@ -288,6 +349,45 @@ System.out.println(a == c.intern()); // true - intern() returns the pooled copy`
    {id:`n1`,t:`How a key finds its bucket`,x:210,y:8,w:200,k:`note`,m:[`Finding the bucket:`,`1 hashCode() of the key`,`2 spread the bits`,`3 index = hash & (n - 1)`,`4 compare with equals()`]},
    {id:`n2`,t:`Treeify`,x:210,y:84,w:200,k:`note`,m:[`Treeify rule:`,`chain of 8+ and table 64+`,`becomes a red-black tree`,`lookup O(n) -> O(log n)`]}],
   edges:[]}},
+ {t:`p`,h:`<h2>A HashMap you can build in your head</h2>`},
+ {t:`plain`,h:`The best way to explain a HashMap in an interview is to build a very small one. Here the map has only four boxes, like four pigeonholes for flat letters. We store five flats, so at least two must share a box.`},
+ {t:`code`,cap:`Java: a tiny hash map with four boxes (plain Java)`,code:`static class TinyMap {
+    private final List<List<String[]>> buckets = new ArrayList<>();   // each bucket holds {key, value} pairs
+    TinyMap(int size) { for (int i = 0; i < size; i++) buckets.add(new ArrayList<>()); }
+    private int bucketFor(String key) { return Math.floorMod(key.hashCode(), buckets.size()); }
+    void put(String key, String value) {
+        List<String[]> bucket = buckets.get(bucketFor(key));
+        for (String[] pair : bucket) if (pair[0].equals(key)) { pair[1] = value; return; }   // same key: replace
+        bucket.add(new String[]{key, value});                                              // else add to the chain
+    }
+    String get(String key) {
+        for (String[] pair : buckets.get(bucketFor(key))) if (pair[0].equals(key)) return pair[1];
+        return null;
+    }
+    void print() {
+        for (int i = 0; i < buckets.size(); i++) {
+            StringBuilder sb = new StringBuilder("box " + i + ":");
+            for (String[] p : buckets.get(i)) sb.append("  ").append(p[0]).append("=").append(p[1]);
+            System.out.println(sb);
+        }
+    }
+}
+static void j_hashmap() {
+    TinyMap flats = new TinyMap(4);                  // only 4 boxes, so some flats must share a box
+    flats.put("A101", "Asha");
+    flats.put("B202", "Ravi");
+    flats.put("C303", "Meera");
+    flats.put("D404", "Kiran");
+    flats.put("E505", "Neha");
+    flats.print();
+    System.out.println("get B202 -> " + flats.get("B202"));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`box 0:  D404=Kiran
+box 1:  A101=Asha  E505=Neha
+box 2:  B202=Ravi
+box 3:  C303=Meera
+get B202 -> Ravi`},
+ {t:`steps`,items:[[`Pick the box.`,` <code>hashCode</code> turns the key into a number. Dividing by the number of boxes and taking the remainder picks the box.`],[`Two flats in box 1.`,` A101 and E505 landed in the same box. This is a <b>collision</b>. They simply sit in a short list in that box.`],[`Finding a key.`,` Go straight to its box, then compare keys with <code>equals</code> inside the short list. That is why <code>equals</code> and <code>hashCode</code> must agree.`],[`What the real HashMap adds.`,` It grows the number of boxes when it gets crowded (at 75 percent full), and since Java 8 it turns a very long chain into a balanced tree.`]]},
  {t:`p`,h:`<h2>The facts to have ready</h2>`},
  {t:`cards`,items:[
    {h:`Default size and growth`,b:`Starts with 16 buckets. When entries exceed <b>capacity x 0.75</b> (the load factor), it doubles and re-distributes. Resizing is the costly moment.`},
@@ -365,6 +465,30 @@ class ReportService {
     }
 }
 // GET /reports/city-totals  ->  {"Pune": 182000.0, "Mumbai": 240500.0}`},
+ {t:`analogy`,h:`A stream is a tiffin assembly line. Nothing moves until the last person at the end says "send me one". Then each box passes through washing, packing and sealing, one box at a time, not all the washing first. And if the customer only wanted two boxes, the line stops as soon as it has two. You will see exactly that in the output below.`},
+ {t:`code`,cap:`Java: watch the line run (plain Java)`,code:`static void j_stream() {
+    List<String> cities = List.of("Pune", "Mumbai", "Delhi", "Pune", "Chennai", "Pune");
+
+    // A stream does nothing until a terminal operation runs, then each item goes through the whole line one by one.
+    List<String> result = cities.stream()
+            .peek(c -> System.out.println("  looking at " + c))
+            .filter(c -> c.startsWith("P"))
+            .map(String::toUpperCase)
+            .limit(2)
+            .collect(Collectors.toList());
+    System.out.println("result = " + result);
+
+    Map<String, Long> counts = cities.stream()
+            .collect(Collectors.groupingBy(c -> c, TreeMap::new, Collectors.counting()));
+    System.out.println("counts = " + counts);
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`  looking at Pune
+  looking at Mumbai
+  looking at Delhi
+  looking at Pune
+result = [PUNE, PUNE]
+counts = {Chennai=1, Delhi=1, Mumbai=1, Pune=3}`},
+ {t:`steps`,items:[[`Nothing prints before <code>collect</code>.`,` The intermediate steps (<code>filter</code>, <code>map</code>) only describe the line. The terminal step starts it.`],[`Items go one by one.`,` "Pune" goes through filter, map and limit before "Mumbai" is even looked at.`],[`<code>limit(2)</code> stops early.`,` After two Pune results the line stops. The last three cities were never looked at.`],[`Group and count.`,` <code>groupingBy</code> is the stream way of "for each city, count the orders". It builds a map for you.`]]},
  {t:`p`,h:`<h2>How a stream really runs</h2>`},
  {t:`steps`,items:[
    [`Source.`,` A collection, array, or generator.`],
@@ -382,6 +506,26 @@ String city = find(email)
 
 find(email).ifPresent(u -> audit.log(u));
 User u = find(email).orElseThrow(() -> new NotFoundException(email));`},
+ {t:`analogy`,h:`<code>Optional</code> is a tiffin box that may or may not have food. Instead of opening the lid and finding nothing (a <code>NullPointerException</code>), you ask the box politely: "give me what is inside, or this default if it is empty". The one thing to watch is <code>orElse</code> versus <code>orElseGet</code>, shown below.`},
+ {t:`code`,cap:`Java: orElse always computes the default, orElseGet only when needed`,code:`static String expensiveDefault() {
+    System.out.println("  (computing the default...)");
+    return "guest";
+}
+static void j_optional() {
+    Optional<String> name = Optional.of("Asha");
+    System.out.println("orElse:");
+    System.out.println(name.orElse(expensiveDefault()));        // default is built even though not needed
+    System.out.println("orElseGet:");
+    System.out.println(name.orElseGet(Demos::expensiveDefault)); // default is built only when empty
+    System.out.println(Optional.empty().isPresent());
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`orElse:
+  (computing the default...)
+Asha
+orElseGet:
+Asha
+false`},
+ {t:`mistake`,h:`Writing <code>orElse(callADatabase())</code>. The database call happens every time, even when the Optional has a value. Use <code>orElseGet(() -> callADatabase())</code> for anything slow.`},
  {t:`p`,h:`<h2>CompletableFuture: do slow things in parallel</h2>`},
  {t:`code`,use:true,cap:`How it is used: call two services at once instead of one after the other`,code:`ExecutorService pool = Executors.newFixedThreadPool(8);
 
@@ -395,6 +539,7 @@ Profile profile = user.thenCombine(orders, Profile::new)   // when BOTH are done
 // Two 300 ms calls now take about 300 ms in total, not 600 ms.`},
  {t:`remember`,h:`Also from Java 8: <b>default methods</b> in interfaces, <b>method references</b> (<code>String::length</code>), the <b>java.time</b> API (<code>LocalDate</code>, <code>Instant</code>, immutable and thread-safe, unlike <code>Date</code> and <code>SimpleDateFormat</code>), and <b>Base64</b> in the standard library.`},
  {t:`mistake`,h:`Three common ones. (1) Using <code>parallelStream()</code> on small lists or inside a web request: it shares one common pool and can hurt more than help. (2) Changing outside state inside a stream, such as adding to a list from <code>forEach</code>: not safe in parallel. (3) Calling <code>Optional.get()</code> without checking, which just moves the NullPointerException.`},
+ {t:`analogy`,h:`<code>CompletableFuture</code> is ordering food from two restaurants on two apps at the same time, instead of waiting for the first delivery before placing the second order. You place both orders, then wait until both have arrived and put the meal together. Total time is the slower delivery, not the sum of both.`},
  {t:`check`,q:`Why must local variables used inside a lambda be effectively final?`,a:`A lambda may run later or on another thread, and local variables live on the stack of the method that created it. Java copies the value into the lambda, so the variable must not change afterwards, or the copy and original would disagree. Fields are fine, because the lambda holds a reference to the object.`}
 ]},
 
@@ -409,6 +554,7 @@ Map<String,Integer> m = Map.of("a", 1, "b", 2); // 9: immutable map
 var client = HttpClient.newHttpClient();         // 11: modern HTTP client, replaces HttpURLConnection
 String text = Files.readString(Path.of("a.txt")); // 11`},
  {t:`mistake`,h:`<code>List.of</code> and <code>Map.of</code> are <b>immutable</b>: <code>add</code> throws <code>UnsupportedOperationException</code>, and nulls are rejected. Use <code>new ArrayList&lt;&gt;(List.of(...))</code> when you need to change it. Also, <code>var</code> is not dynamic typing. The type is still fixed at compile time.`},
+ {t:`analogy`,h:`A record is a pre-printed form. You decide the boxes once (name, amount, currency), and the printing press adds the fixed parts for free: a way to fill it in, a way to read each box, a way to compare two forms, and a way to print one. You do not hand-write them for every form.`},
  {t:`p`,h:`<h2>Records (Java 16): data holders with no boilerplate</h2>`},
  {t:`plain`,h:`A <b>record</b> is a class for carrying data. You list the fields once and the compiler writes the constructor, getters, <code>equals</code>, <code>hashCode</code> and <code>toString</code>. Fields are final, so it is immutable by design.`},
  {t:`code`,cap:`Before and after`,code:`// Before: about 30 lines of fields, constructor, getters, equals, hashCode, toString
@@ -430,6 +576,28 @@ public OrderView get(@PathVariable long id) {
 
 Map<Money,String> labels = new HashMap<>();   // safe key: immutable, equals/hashCode built in`},
  {t:`remember`,h:`A record is <b>not</b> a JPA entity. Hibernate needs a no-arg constructor and mutable fields. Use records for DTOs and responses, and keep classes for entities.`},
+ {t:`code`,cap:`Java: a record doing real work (plain Java 21)`,code:`record Money(long paise, String currency) {
+    Money {                                              // compact constructor: validation lives here
+        if (paise < 0) throw new IllegalArgumentException("amount cannot be negative");
+        currency = currency.toUpperCase();
+    }
+    Money plus(Money other) { return new Money(paise + other.paise, currency); }
+}
+static void j_record() {
+    Money a = new Money(5000, "inr");
+    Money b = new Money(5000, "INR");
+    System.out.println(a);                                // toString written for you
+    System.out.println("equal by value? " + a.equals(b)); // equals and hashCode written for you
+    System.out.println("works as a map key? " + Map.of(a, "fee").get(b));
+    System.out.println(a.plus(b));
+    try { new Money(-1, "INR"); } catch (IllegalArgumentException e) { System.out.println("rejected: " + e.getMessage()); }
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`Money[paise=5000, currency=INR]
+equal by value? true
+works as a map key? fee
+Money[paise=10000, currency=INR]
+rejected: amount cannot be negative`},
+ {t:`plain`,h:`Three things to notice. The record prints itself nicely. Two records with the same values are equal and work as map keys. And the "compact constructor" is where you put validation, so an invalid <code>Money</code> can never exist.`},
  {t:`p`,h:`<h2>Switch expressions and pattern matching for instanceof</h2>`},
  {t:`code`,cap:`Java 14 and 16`,code:`// Switch as an expression: returns a value, no fall-through, no break
 int days = switch (month) {
@@ -466,6 +634,25 @@ String message(PaymentResult r) {
  {t:`cards`,items:[
    {h:`Also in 9 to 17`,b:`Modules (9), <code>Optional.ifPresentOrElse</code>, <code>Stream.toList()</code> (16), helpful NullPointerException messages (14), a new garbage collector line (ZGC and Shenandoah become production-ready), and strong encapsulation of JDK internals in 17.`}]},
  {t:`mistake`,h:`Calling a record "a shorter class" and stopping there. Say what it is for (immutable data), what it generates, what it cannot do (extend another class, have instance fields beyond the header, be a JPA entity), and when you would still use a normal class.`},
+ {t:`analogy`,h:`A sealed type is a restaurant menu card with a fixed list of dishes. Because the list is closed, the waiter knows every possible order. If you add a new dish and forget to handle it, the compiler tells you, instead of the kitchen finding out at 9 pm.`},
+ {t:`code`,cap:`Java: sealed type and a switch with no default (plain Java 21)`,code:`sealed interface Payment permits Card, Upi, Cash {}
+record Card(String last4) implements Payment {}
+record Upi(String handle) implements Payment {}
+record Cash() implements Payment {}
+
+static String describe(Payment p) {
+    return switch (p) {                                  // no default needed: the compiler knows every case
+        case Card c -> "Card ending " + c.last4();
+        case Upi u  -> "UPI to " + u.handle();
+        case Cash c -> "Cash on delivery";
+    };
+}
+static void j_sealed() {
+    for (Payment p : List.of(new Card("4242"), new Upi("asha@upi"), new Cash())) System.out.println(describe(p));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`Card ending 4242
+UPI to asha@upi
+Cash on delivery`},
  {t:`check`,q:`When would you choose a sealed interface over an enum?`,a:`An enum has a fixed set of <b>instances</b>, all of the same shape. A sealed interface has a fixed set of <b>types</b>, and each type can carry different data. Payment results are a good example: Success has a transaction id, Failed has a reason. An enum cannot hold different fields per constant cleanly.`}
 ]},
 
@@ -492,6 +679,26 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
 
 // Spring Boot 3.2 and later: one line in application.properties
 // spring.threads.virtual.enabled=true     (Tomcat now serves each request on a virtual thread)`},
+ {t:`analogy`,h:`Think of 10,000 delivery orders, where each order spends most of its time waiting for a restaurant to prepare the food. Hiring 10,000 full-time riders is silly and expensive. Virtual threads are like riders who put down your order while it is being cooked and pick up another one, then return when it is ready. The code you write looks like normal, simple, one-order-at-a-time code.`},
+ {t:`code`,cap:`Java 21: ten thousand tasks, each waiting one second`,code:`static void j_virtual() throws Exception {
+    AtomicInteger finished = new AtomicInteger();
+    long start = System.nanoTime();
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        for (int i = 0; i < 10_000; i++) {
+            executor.submit(() -> {
+                Thread.sleep(1000);                      // pretend this is a slow database call
+                finished.incrementAndGet();
+                return null;
+            });
+        }
+    }                                                    // close() waits for every task
+    long seconds = (System.nanoTime() - start) / 1_000_000_000;
+    System.out.println("tasks finished: " + finished.get());
+    System.out.println("took under 5 seconds? " + (seconds < 5));
+}`},
+ {t:`code`,use:true,cap:`What it prints`,code:`tasks finished: 10000
+took under 5 seconds? true`},
+ {t:`plain`,h:`Ten thousand ordinary threads would need a huge amount of memory and would likely fail. Virtual threads finish in a little over one second because while one waits, others use the same few real threads. Remember the rule: virtual threads help when your tasks <b>wait</b> (network, database). They do not make heavy calculation faster.`},
  {t:`p`,h:`<h2>Where they help, and where they do not</h2>`},
  {t:`two`,a:{h:`Helps`,b:`Code that mostly <b>waits</b>: web requests calling databases and other services. You keep simple blocking code and get high throughput. No need for reactive code in many cases.`},b:{h:`Does not help`,b:`CPU-heavy work. If every task burns CPU, you are limited by cores, not threads. Also not a way to make a single slow call faster.`}},
  {t:`cards`,items:[
